@@ -35,33 +35,37 @@ class OfferStats
         DB::transaction(function () use ($productIds) {
             DB::table('products')->whereIn('id', $productIds)->orderBy('id')->lock('FOR NO KEY UPDATE')->pluck('id');
 
-            $this->recompute('WHERE p.id IN ('.implode(',', array_fill(0, count($productIds), '?')).')', $productIds);
+            $this->recompute('p.id IN ('.implode(',', array_fill(0, count($productIds), '?')).')', $productIds);
         });
     }
 
     /** Recompute every product. Used by the seeder and `catalog:sync-offer-stats` after bulk writes. */
     public function refreshAll(): int
     {
-        return $this->recompute('', []);
+        return $this->recompute('TRUE', []);
     }
 
-    private function recompute(string $where, array $bindings): int
+    /**
+     * Per-product correlated subqueries, each answered from the (product_id, is_active, price_cents)
+     * index. Deliberately NOT "UPDATE … FROM (products ⋈ offers GROUP BY)": that self-join form
+     * intermittently ran for minutes at 100% CPU in the test suite (root cause not pinned down; see
+     * PLAN.md "Open issues"). This shape bounds the work to two index lookups per product whatever
+     * plan the planner picks.
+     */
+    private function recompute(string $condition, array $bindings): int
     {
-        // IS DISTINCT FROM: skip no-op writes so unchanged rows aren't rewritten (and their indexes untouched).
+        $active = 'SELECT MIN(o.price_cents) AS m, COUNT(*) AS c FROM offers o WHERE o.product_id = p.id AND o.is_active';
+
+        // The EXISTS(… IS DISTINCT FROM …) guard skips no-op writes, so unchanged rows aren't
+        // rewritten (and their indexes, including the trigram GIN, aren't touched).
         return DB::update(<<<SQL
             UPDATE products AS p
-            SET min_price_cents = s.min_price_cents, offers_count = s.offers_count
-            FROM (
-                SELECT p.id,
-                       MIN(o.price_cents) FILTER (WHERE o.is_active) AS min_price_cents,
-                       COUNT(o.id)        FILTER (WHERE o.is_active) AS offers_count
-                FROM products p
-                LEFT JOIN offers o ON o.product_id = p.id
-                {$where}
-                GROUP BY p.id
-            ) AS s
-            WHERE p.id = s.id
-              AND (p.min_price_cents IS DISTINCT FROM s.min_price_cents OR p.offers_count IS DISTINCT FROM s.offers_count)
+            SET (min_price_cents, offers_count) = (SELECT s.m, s.c FROM ({$active}) AS s)
+            WHERE {$condition}
+              AND EXISTS (
+                  SELECT 1 FROM ({$active}) AS s
+                  WHERE p.min_price_cents IS DISTINCT FROM s.m OR p.offers_count IS DISTINCT FROM s.c
+              )
             SQL, $bindings);
     }
 }
