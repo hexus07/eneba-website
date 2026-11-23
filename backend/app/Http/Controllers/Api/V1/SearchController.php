@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ProductCardResource;
+use App\Http\Resources\SearchSuggestionResource;
 use App\Services\Catalog\ProductFilter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -16,6 +16,6 @@ class SearchController extends Controller
     {
         $data = $request->validate(['q' => ['nullable', 'string', 'max:'.config('search.max_query_length')]]);
 
-        return ProductCardResource::collection($filter->suggest((string) ($data['q'] ?? ''), self::LIMIT));
+        return SearchSuggestionResource::collection($filter->suggest((string) ($data['q'] ?? ''), self::LIMIT));
     }
 }

@@ -31,8 +31,8 @@ class SearchSuggestTest extends TestCase
         // Known limit: a typo in EVERY short word ("eldn rng", word_similarity 0.33) falls below the 0.5 threshold.
         $this->assertSame([], $this->suggest('eldn rng'));
         $this->assertSame(
-            $this->getJson('/api/v1/products?q=cyber')->json('data.*.title'),
-            $this->suggest('cyber'),
+            $this->getJson('/api/v1/products?q=cyber')->json('data.*.slug'),
+            $this->getJson('/api/v1/search/suggest?q=cyber')->json('data.*.slug'),
             'dropdown and full results agree',
         );
     }
@@ -70,10 +70,12 @@ class SearchSuggestTest extends TestCase
         return ['missing' => [''], 'empty' => ['?q='], 'one char' => ['?q=c'], 'symbols' => ['?q=%25%25']];
     }
 
-    public function test_card_shape(): void
+    public function test_returns_the_small_suggestion_shape_only(): void
     {
-        $this->getJson('/api/v1/search/suggest?q=hades')
-            ->assertJsonStructure(['data' => [['slug', 'title', 'platform' => ['slug', 'name'], 'region' => ['slug', 'name'], 'cover_url', 'min_price_cents']]]);
+        $item = $this->getJson('/api/v1/search/suggest?q=hades')->assertOk()->json('data.0');
+
+        $this->assertSame(['slug', 'title', 'cover_url', 'min_price_cents', 'currency', 'platform'], array_keys($item));
+        $this->assertSame(['slug', 'name'], array_keys($item['platform']));
     }
 
     public function test_rejects_overlong_query(): void

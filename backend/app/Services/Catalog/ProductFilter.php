@@ -65,7 +65,7 @@ class ProductFilter
             return new Collection;
         }
 
-        $query = Product::query()->select('products.*')->with(['platform', 'region'])->where('products.offers_count', '>', 0);
+        $query = Product::query()->select('products.*')->with('platform')->where('products.offers_count', '>', 0);
         $this->search->apply($query, $q);
         $this->search->orderByRelevance($query, $q);
 
