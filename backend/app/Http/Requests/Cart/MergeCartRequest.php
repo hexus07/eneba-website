@@ -5,6 +5,7 @@ namespace App\Http\Requests\Cart;
 use App\Models\CartItem;
 use Illuminate\Foundation\Http\FormRequest;
 
+/** Guest cart lines: used by POST /cart/merge and POST /cart/preview. */
 class MergeCartRequest extends FormRequest
 {
     public function authorize(): bool

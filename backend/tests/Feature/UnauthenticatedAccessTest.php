@@ -20,6 +20,7 @@ class UnauthenticatedAccessTest extends TestCase
 
         return [
             'me' => ['GET', '/api/v1/auth/me'],
+            'me (alias)' => ['GET', '/api/v1/me'],
             'logout' => ['POST', '/api/v1/auth/logout'],
             'cart' => ['GET', '/api/v1/cart'],
             'add to cart' => ['POST', '/api/v1/cart/items'],

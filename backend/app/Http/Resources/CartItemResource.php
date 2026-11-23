@@ -6,7 +6,9 @@ use App\Models\CartItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin CartItem  (requires `available_stock` set by CartService) */
+/** @mixin CartItem  (requires `available_stock` set by CartService)
+ * `id` is null for guest-cart previews (nothing is stored); offer_id identifies the line there.
+ */
 class CartItemResource extends JsonResource
 {
     public function toArray(Request $request): array

@@ -24,11 +24,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/login', [AuthController::class, 'login']);
     });
 
+    // Guest cart pricing (localStorage lines → live prices/stock). Public, so rate-limited.
+    Route::post('/cart/preview', [CartController::class, 'preview'])->middleware('throttle:60,1');
+
     // Signature-verified, so no auth middleware.
     Route::post('/payments/stripe/webhook', StripeWebhookController::class);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::get('/me', [AuthController::class, 'me']); // alias (milestone spec)
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::get('/cart', [CartController::class, 'show']);

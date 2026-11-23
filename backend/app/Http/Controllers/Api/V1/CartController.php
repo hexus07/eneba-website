@@ -11,6 +11,7 @@ use App\Models\CartItem;
 use App\Services\Cart\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class CartController extends Controller
 {
@@ -42,6 +43,12 @@ class CartController extends Controller
         return $this->cartResponse($request);
     }
 
+    /** Public: price a guest's localStorage cart (same response shape as GET /cart, nothing stored). */
+    public function preview(MergeCartRequest $request): JsonResponse
+    {
+        return $this->respond($this->cart->preview($request->validated('items')));
+    }
+
     public function merge(MergeCartRequest $request): JsonResponse
     {
         $this->cart->merge($request->user(), $request->validated('items'));
@@ -57,8 +64,12 @@ class CartController extends Controller
 
     private function cartResponse(Request $request, int $status = 200): JsonResponse
     {
-        $items = $this->cart->items($request->user());
+        return $this->respond($this->cart->items($request->user()), $status);
+    }
 
+    /** @param Collection<int, CartItem> $items */
+    private function respond(Collection $items, int $status = 200): JsonResponse
+    {
         return response()->json(['data' => [
             'items' => CartItemResource::collection($items),
             'totals' => [

@@ -33,6 +33,41 @@ class CartService
         ));
     }
 
+    /**
+     * Guest cart (localStorage lines) priced like a real cart, without persisting anything: live
+     * prices, stock and availability, so a guest never sees stale data. Unknown offers are dropped;
+     * repeated offers are combined; order follows the input.
+     *
+     * @param  list<array{offer_id: int, quantity: int}>  $lines
+     * @return Collection<int, CartItem>
+     */
+    public function preview(array $lines): Collection
+    {
+        $quantities = [];
+        foreach ($lines as $line) {
+            $quantities[$line['offer_id']] = ($quantities[$line['offer_id']] ?? 0) + $line['quantity'];
+        }
+
+        $offers = Offer::query()
+            ->with(['product.platform', 'product.region', 'seller'])
+            ->whereIn('id', array_keys($quantities))
+            ->get()
+            ->keyBy('id');
+        $available = $this->stock->available($offers->keys());
+
+        return collect($quantities)
+            ->filter(fn ($qty, $offerId) => $offers->has($offerId))
+            ->map(function ($qty, $offerId) use ($offers, $available) {
+                $offer = $offers[$offerId];
+                $item = new CartItem(['offer_id' => $offerId, 'quantity' => $qty]);
+                $item->setRelation('offer', $offer);
+                $item->setAttribute('available_stock', $offer->is_active ? $available[$offerId] : 0);
+
+                return $item;
+            })
+            ->values();
+    }
+
     /** "Add to cart": adds to the existing line's quantity. */
     public function add(User $user, int $offerId, int $quantity): CartItem
     {
