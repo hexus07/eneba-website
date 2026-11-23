@@ -15,8 +15,8 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 |---|---|---|
 | **Search & Store** | **Deep** | Typo/partial tolerant search, header autocomplete, facet counts, URL-synced filters, sorting, pagination, empty/zero-result states with suggestions |
 | **Eneba visual fidelity** | **Deep** | Design tokens, close match on components, responsive down to 360px, skeletons, hover/focus states, mobile nav + filter drawer |
-| Homepage | Standard+ | Backend-driven layout, per-block endpoints, per-block error isolation |
-| Product page | Standard | Details, offers from multiple sellers sorted by price, seller rating, platform/region badges |
+| Homepage | Standard+ | Backend-driven layout, per-block endpoints (✅ backend), per-block error isolation (frontend) |
+| Product page | Standard | Details, offers from multiple sellers sorted by price, seller rating, platform/region badges (✅ backend, incl. variants) |
 | Checkout & keys | Standard+ | ✅ Cart, Stripe PaymentIntents (test) + fake gateway, keys assigned on payment success with `SKIP LOCKED`, auto-refund on oversell, idempotent webhook, order history with keys. Tested under real multi-process concurrency |
 | Auth | Standard | ✅ Register/login/logout/me, Sanctum bearer tokens (7-day expiry), rate-limited login, protected routes |
 
@@ -46,12 +46,14 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 ### Homepage: backend-driven blocks
 - `home_blocks` table holds the layout: `key`, `type`, `title`, `position`, `config jsonb`, `is_active`.
 - `GET /home` returns the ordered layout: `[{ key, type, title, endpoint }]`.
-- `GET /home/blocks/{key}` returns that block's payload. `BlockRegistry` maps the block `type` to a provider class:
-  - `hero_banner` → `BannerBlockProvider` (reads `banners` table, respects `starts_at`/`ends_at`)
-  - `best_sellers` → `BestSellersBlockProvider` (aggregates `order_items` over N days, falls back to `products.sales_count`)
-  - `deals` → `DealsBlockProvider` (offers with the highest discount vs `original_price_cents`)
-  - `new_releases` → `NewReleasesBlockProvider` (by `release_date`)
-  - `platform_tiles` → `PlatformTilesBlockProvider` (from `platforms`)
+- `GET /home/blocks/{key}` returns that block's payload (implemented). `BlockRegistry` maps the block `type` to a provider class through `config/home.php`. A new block type is one class implementing `Services\Home\BlockProvider` plus one config line. Blocks whose type has no provider are left out of the layout and return 404, so a row added ahead of a deploy can't break the page.
+  - `hero_banner` → `HeroBannerBlockProvider`: `banners` table, respects `starts_at`/`ends_at`
+  - `best_sellers` → `BestSellersBlockProvider`: units from *completed* orders in the last `days` (default 30), topped up by `products.sales_count` when there aren't enough recent sales
+  - `deals` → `DealsBlockProvider`: active offers with the biggest discount vs `original_price_cents`, one per product, `min_discount_percent` threshold
+  - `new_releases` → `NewReleasesBlockProvider`: released (not future) games by `release_date`
+  - `platform_tiles` → `PlatformTilesBlockProvider`: `platforms` with in-stock product counts and a `/store?platform=` link
+  - Product blocks only include in-stock products (`offers_count > 0`). Per-block `config` sets `limit`, etc. Seeded by `HomeSeeder` (5 blocks, 3 banners pointing at real products).
+  - Not done: response caching per block.
 - The frontend has a `type → component` map. It fetches each block on its own with its own skeleton and error boundary, so a failing block disappears without breaking the page. No content, titles or ordering are hardcoded in the frontend.
 - Each block is an independent contract (its own endpoint and data source), so a block can later move to a separate service without frontend changes.
 
@@ -65,12 +67,13 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 - Relevance order: title starts with q → some word starts with q → `word_similarity` → `sales_count`.
 - A query of only symbols (`%`, `!!!`) matches nothing rather than everything.
 - No `tsvector` full-text search. Titles are short names, not prose, so stemming and stop-words add little, and trigram + ILIKE already covers whole words, partials and typos. Revisit only if we search descriptions.
-- When a search returns zero results, return a "did you mean" suggestion: the title with the highest `similarity`.
-- `GET /search/suggest?q=` serves the header autocomplete (top 8, debounced 200ms, keyboard navigable). The catalog's `q` uses the same service, so the dropdown and the full results always agree.
+- **Not implemented yet:** on zero results, return a "did you mean" suggestion (the title with the highest `similarity`).
+- Known limit: a typo in *every* short word ("eldn rng", word_similarity 0.33) falls below the 0.5 threshold. One typo per phrase works ("eldn ring" 0.62, "elden rng" 0.70).
+- `GET /search/suggest?q=` serves the header autocomplete (implemented: top 8 in-stock products, at least 2 characters, same matching, ranking and threshold as the catalog via `ProductFilter::suggest`). The debounce and keyboard navigation are frontend work.
 
 ### Store / catalog
-- `GET /products` accepts filters for platform[], region[], genre[], type, price_min/max and in_stock, plus `sort` (relevance | popular | price_asc | price_desc | newest) and pagination.
-- The response includes **facets**: counts per platform/region/genre/type under the current filters, so each facet's count excludes its own filter. The price range (min/max) is included too.
+- `GET /products` accepts filters for platform[], region[], genre[] *(not yet)*, type *(not yet)*, price_min/max and in_stock *(not yet)*, plus `sort` (relevance | popular | price_asc | price_desc | newest) and pagination.
+- **Not implemented yet:** the response includes **facets**: counts per platform/region/genre/type under the current filters, so each facet's count excludes its own filter. The price range (min/max) is included too.
 - Price filtering and sorting use the denormalized `products.min_price_cents`, which an `Offer` observer recomputes along with `offers_count`.
 - On the frontend, filter state lives in the URL query string as the single source of truth. That makes results shareable and keeps back/forward working.
 
@@ -96,7 +99,7 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 ### Auth
 - Sanctum personal access tokens sent as `Authorization: Bearer`. The frontend and API are on different domains, so tokens avoid cross-site cookie and CSRF problems.
 - The token is stored in localStorage. Tradeoff: it is exposed if an XSS bug exists. Mitigations are a strict CSP on Vercel, no `dangerouslySetInnerHTML`, and a configured token expiry.
-- Rate limiting: `throttle:auth` (5/min) on login/register and `throttle:api` elsewhere.
+- Rate limiting: `throttle:auth` (5/min) on login/register. *Not yet:* a general `throttle:api` limit elsewhere.
 
 ---
 
@@ -184,15 +187,15 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/products` | **Implemented:** `q, platform[] (or csv), region[] (or csv), price_min, price_max (cents, inclusive), sort=relevance\|popular\|price_asc\|price_desc\|newest, page, per_page(≤48)` → standard Laravel pagination `{data, links, meta}`. Planned: `genre[], type, in_stock`, facets, did_you_mean |
-| GET | `/products/{slug}` | product + genres + offers (active, cheapest first, with seller + stock) |
-| GET | `/filters` | all platforms, regions, genres, types (for initial filter UI) |
-| GET | `/search/suggest` | `q` → top 8 `{ slug, title, platform, region, cover_url, min_price_cents }` |
+| GET | `/products/{slug}` | **Implemented:** product + genres + purchasable offers (active and in stock, cheapest first) with seller rating, reviews, verified flag, stock and `discount_percent`, plus `variants` (same title on other platforms/regions). 404 for unknown slug |
+| GET | `/filters` | *Not implemented yet.* All platforms, regions, genres, types (for initial filter UI) |
+| GET | `/search/suggest` | **Implemented:** `q` (at least 2 chars) → top 8 in-stock product cards |
 
 ### Home
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/home` | ordered layout `[{ key, type, title, endpoint }]` |
-| GET | `/home/blocks/{key}` | block payload; shape depends on `type` |
+| GET | `/home` | **Implemented:** ordered layout `[{ key, type, title, endpoint }]` |
+| GET | `/home/blocks/{key}` | **Implemented:** `{ key, type, title, items: [...] }`. Item shape depends on `type`. 404 if inactive, unknown or unregistered type |
 
 ### Cart (auth)
 | Method | Path | Notes |
@@ -250,7 +253,7 @@ eneba-website/
     │   └── Services/
     │       ├── Search/ProductSearch.php, SearchNormalizer.php
     │       ├── Catalog/ProductFilter.php, FacetBuilder.php
-    │       ├── Home/BlockRegistry.php, Blocks/*BlockProvider.php, Contracts/BlockProvider.php
+    │       ├── Home/BlockRegistry.php, BlockProvider.php, Blocks/*BlockProvider.php
     │       ├── Checkout/CheckoutService.php, KeyAllocator.php, OrderFulfiller.php
     │       └── Payments/PaymentGateway.php, StripeGateway.php, FakeGateway.php
     ├── config/search.php, payments.php
@@ -284,7 +287,7 @@ eneba-website/
 | DB | Neon | use **pooled** connection string; PgBouncer transaction mode → `PDO::ATTR_EMULATE_PREPARES => true`; direct (unpooled) URL for migrations |
 | Payments | Stripe test mode | `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`; webhook → `https://<render>/api/v1/payments/stripe/webhook` |
 
-CORS: allow only the Vercel origin(s) and `localhost:5173`. Known limitation: on Render's free tier the first request after idle takes about 50s (cold start). The frontend shows a "waking up server" state when a request runs long.
+CORS (*not configured yet*: Laravel's default currently allows any origin): allow only the Vercel origin(s) and `localhost:5173`. Known limitation: on Render's free tier the first request after idle takes about 50s (cold start). The frontend shows a "waking up server" state when a request runs long.
 
 ---
 
@@ -307,18 +310,26 @@ CORS: allow only the Vercel origin(s) and `localhost:5173`. Known limitation: on
 
 ## 9. Milestones
 
-1. **M0 Scaffolding:** monorepo, docker-compose Postgres, Laravel API skeleton + Sanctum, Vite/Tailwind app, apiClient, CI lint/test.
+1. **M0 Scaffolding:** 🟡 backend + frontend scaffolds and `apiClient` done. Missing: docker-compose, CI. Planned: monorepo, docker-compose Postgres, Laravel API skeleton + Sanctum, Vite/Tailwind app, apiClient, CI lint/test.
 2. **M1 Data:** ✅ migrations, models, factories, realistic seeders, Offer observer.
 3. **M2 Design system:** ✅ `frontend/` scaffold, tokens → Tailwind theme (palette and spacing replaced, enforced by lint and tests), `components/ui` (Button ×4, Badge ×4, PriceTag, ProductCard with hover add-to-cart, SectionHeading, TextInput, Checkbox, QuantityStepper, Spinner, Skeleton), AppLayout with Header and Footer Full/Checkout/Auth, `/dev/ui` showcase, `apiClient`, `money`. Open: font family and brand name to confirm (§10). Planned: sample eneba.com, finalize tokens, build `components/ui`, AppLayout (header/footer).
-4. **M3 Store + Search (deep):** `ProductSearch`, `ProductFilter`, `FacetBuilder` + tests. StorePage with URL-synced filters, drawer, pagination, autocomplete, did-you-mean.
-5. **M4 Homepage:** home_blocks, providers, `/home` endpoints. Block registry with isolated loading and error states.
-6. **M5 Product page:** details and offers list, add to cart.
-7. **M6 Auth + Cart:** ✅ register/login, protected routes, guest cart and merge.
-8. **M7 Checkout:** ✅ CheckoutService, OrderFulfiller, Fake + Stripe gateway, webhook, orders with keys.
-9. **M8 Polish & deploy:** responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
+4. **M3 Store + Search (deep):** 🟡 backend: search, filters (platform/region/price), sort, pagination, suggest. Missing: genre/type/in_stock filters, `FacetBuilder`, `/filters`, did-you-mean, entire StorePage. Planned: `ProductSearch`, `ProductFilter`, `FacetBuilder` + tests. StorePage with URL-synced filters, drawer, pagination, autocomplete, did-you-mean.
+5. **M4 Homepage:** 🟡 backend ✅ (home_blocks, 5 providers, endpoints, seeder). Missing: frontend registry + isolated loading/error states. Planned: home_blocks, providers, `/home` endpoints. Block registry with isolated loading and error states.
+6. **M5 Product page:** 🟡 backend ✅ (`/products/{slug}` with offers + variants). Missing: the page. Planned: details and offers list, add to cart.
+7. **M6 Auth + Cart:** ✅ backend (frontend auth/cart UI not started) register/login, protected routes, guest cart and merge.
+8. **M7 Checkout:** ✅ backend (Stripe Elements / fake-payment UI not started; Stripe never exercised against the real test API) CheckoutService, OrderFulfiller, Fake + Stripe gateway, webhook, orders with keys.
+9. **M8 Polish & deploy:** ⬜ not started. responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
 
-## 10. Open questions / later
+## 10. Open issues
+
+- **Intermittent slow `OfferStats` recompute (root cause unknown).** The original `UPDATE products … FROM (products ⋈ offers GROUP BY)` form sometimes ran for more than 60s, and once for 18 minutes at 100% CPU, during `CatalogSeeder`'s `refreshAll()` in the test suite (about 2 in 13 full runs, only in seeder tests, only late in a series of runs).
+  - Ruled out: stale or "empty" planner stats, stats taken while committed test rows existed, and a forced worst-case nested-loop plan. Every probe finished in about 0.01s.
+  - Mitigation: rewrote the statement as per-product correlated subqueries (two index lookups per row, no self-join), so work is bounded whatever the plan. The local `eneba_test` DB has `statement_timeout = 60s`, so a recurrence fails fast instead of hanging.
+  - Status (2026-11-23): after the rewrite, 0 failures in 20 consecutive full-suite runs (vs 2 in 13 before). Strong evidence (about 4% chance of that by luck at the old rate) but no root cause, so keep the timeout guard and reopen if it recurs, especially after bulk imports in production.
+
 - **Seeded covers are landscape.** `CatalogSeeder` stores Steam's `header.jpg` (460×215), but product cards are portrait 4:5 like Eneba's, so covers are heavily cropped. Steam's `library_600x900.jpg` (portrait) fits and is what `/dev/ui` uses. Switch the seeder (backend change, not done in M2).
 - **Font family unconfirmed.** tokens.json says Inter (now self-hosted via `@fontsource-variable/inter`), but the screens look like a geometric sans (Metropolis-like), and FIGMA_CLEANUP.md §8 warns the import may have substituted it. One-line change in `design-tokens.ts` once checked on eneba.com.
-- Variant switching on the product page (`group_slug`) if time permits.
+
+## 11. Open questions / later
+- Variant switching: the backend already returns `variants` by exact title match. A `group_slug` is only needed if titles diverge between variants.
 - Price history / "lowest in 30 days" badge: nice-to-have, not planned.
