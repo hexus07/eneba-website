@@ -53,6 +53,8 @@ Run the relevant tests, typecheck and lint before calling a task done.
 - Use strict TypeScript and no `any`. API types live in each feature's `types.ts` and mirror the Laravel Resources.
 - **Adding a homepage block type:** backend: a `BlockProvider` class + one line in `config/home.php` (+ a seeded `home_blocks` row); frontend: a component using `useHomeBlock(key)` (render `null` when empty) + a skeleton + one entry in `features/home/blockRegistry.ts`. Never fetch block content outside its slot or hardcode block order/titles.
 - Tests never touch the network: `src/test/setup.ts` makes unmocked `fetch` reject; use `mockApi()` (`'pending'` = never settles).
+- **Cart:** read it only via `useCart()` / `useCartCount()` and change it only via `useCartActions()` / `useAddToCart()` (they branch guest ↔ signed in). Guest lines live in `guestCartStore`; never render them without `POST /cart/preview` prices.
+- **Auth:** login/register go through `useAuthenticate()` (session + guest-cart merge + redirect); follow `?redirect=` only through `safeRedirect()`; guard pages with `<RequireAuth>`; log out with `useLogout()`.
 - Format and parse money only with `lib/money.ts` (`formatMoney`, `eurosToCents`). URL and API prices stay in cents.
 - Product images go through `CoverImage` (portrait capsule → header.jpg → fallback), never a bare `<img src={cover_url}>`.
 - Store state: change it only through `useCatalogParams` / `catalogParams.ts` (canonical URL = one query-cache entry). Pagination and suggestions are links, not buttons.

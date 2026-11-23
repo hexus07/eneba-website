@@ -188,6 +188,7 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 | POST | `/auth/login` | – | `{email, password}` → `{ data: user, token }`. Same 422 for unknown email and wrong password. Throttled 5/min per email+IP |
 | POST | `/auth/logout` | ✓ | revokes current token |
 | GET | `/auth/me` | ✓ | current user |
+| GET | `/me` | ✓ | alias of `/auth/me` |
 
 ### Catalog & search
 | Method | Path | Notes |
@@ -211,6 +212,7 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 | PATCH | `/cart/items/{id}` | `{ quantity }` |
 | DELETE | `/cart/items/{id}` | |
 | POST | `/cart/merge` | `{ items: [{ offer_id, quantity }] }` (guest cart on login) |
+| POST | `/cart/preview` | – | **public**, 60/min: `{ items: [{ offer_id, quantity }] }` → same `{ data: { items, totals } }` as `GET /cart`, priced live, nothing stored (guest cart page) |
 
 ### Checkout, payments, orders (auth unless noted)
 | Method | Path | Notes |
@@ -322,7 +324,7 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
 4. **M3 Store + Search (deep):** ✅ Backend: typo-tolerant search, platform/region/genre/type/price filters, disjunctive facets, price range, did-you-mean, slim suggest. Frontend: `/store` with URL-only state, facet sidebar (drawer on mobile), price range, chips, sort, pagination, skeleton/error/empty states, "Did you mean"; header autocomplete (debounced, ARIA combobox, keyboard). Gaps: no add-to-cart on store cards (the card resource has no offer id, the product page will have it), no `in_stock` filter, and the facet/price queries run on every page change (no caching).
 5. **M4 Homepage:** ✅ Backend: 6 block types (hero_banner, best_sellers, deals, new_releases, by_platform, platform_tiles), gradient/text banners, one card per title, seeded layout of 7 blocks. Frontend: registry-driven HomePage, per-block skeleton/error isolation with retry, ScrollRow carousels, deals add to the guest cart. Gaps: no per-block caching; deals add to the *guest* cart even when signed in (server cart wiring is M6 frontend); no category-shortcut icons (Eneba's icon row needs artwork).
 6. **M5 Product page:** 🟡 backend ✅ (`/products/{slug}` with offers + variants). Missing: the page. Planned: details and offers list, add to cart.
-7. **M6 Auth + Cart:** ✅ backend (frontend auth/cart UI not started) register/login, protected routes, guest cart and merge.
+7. **M6 Auth + Cart:** ✅ Backend (earlier) + `GET /me` alias + public `POST /cart/preview` (guest cart priced live, same shape as `GET /cart`). Frontend: login/register (login.png/register.png; email + password only), guest-cart merge on login (kept on failure), `?redirect=` with open-redirect guard, `RequireAuth` on /checkout and /orders, logout revoking the token; cart page (checkout.png) for guests and users with stock/region warnings; header count, toasts. Gaps: no password reset or email verification; no social / magic-link login; the 7-day token simply expires (no refresh).
 8. **M7 Checkout:** ✅ backend (Stripe Elements / fake-payment UI not started; Stripe never exercised against the real test API) CheckoutService, OrderFulfiller, Fake + Stripe gateway, webhook, orders with keys.
 9. **M8 Polish & deploy:** ⬜ not started. responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
 
