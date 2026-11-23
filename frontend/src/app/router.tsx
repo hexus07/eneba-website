@@ -5,6 +5,7 @@ import { HomePage } from '@/features/home/HomePage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RegisterPage } from '@/features/auth/RegisterPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
+import { CartPage } from '@/features/cart/CartPage';
 import { UiShowcasePage } from '@/pages/dev/UiShowcasePage';
 import { NotFoundPage, PlaceholderPage } from '@/pages/PlaceholderPage';
 
@@ -23,7 +24,7 @@ export const routes = [
   {
     element: <AppLayout header="checkout" footer="checkout" />,
     children: [
-      { path: 'cart', element: <PlaceholderPage title="My cart" milestone="M6" /> },
+      { path: 'cart', element: <CartPage /> },
       { path: 'checkout', element: <RequireAuth><PlaceholderPage title="Checkout" milestone="M7" /></RequireAuth> },
     ],
   },
