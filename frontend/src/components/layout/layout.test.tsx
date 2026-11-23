@@ -60,12 +60,22 @@ describe('AppLayout footer variants by route', () => {
     ['/', 'full'],
     ['/store', 'full'],
     ['/cart', 'checkout'],
-    ['/checkout', 'checkout'],
     ['/login', 'auth'],
     ['/register', 'auth'],
   ])('%s uses the %s footer', (path, variant) => {
     const { container } = renderApp(path);
     expect(container.querySelector('footer')).toHaveAttribute('data-variant', variant);
+  });
+
+  it('/checkout needs login: signed out it shows the login page, signed in the checkout footer', () => {
+    const signedOut = renderApp('/checkout');
+    expect(signedOut.container.querySelector('footer')).toHaveAttribute('data-variant', 'auth');
+    expect(signedOut.router.state.location.pathname).toBe('/login');
+    signedOut.unmount();
+
+    act(() => useAuthStore.getState().setSession('1|t', { id: 1, name: 'Ada', email: 'a@example.com', created_at: '' }));
+    const signedIn = renderApp('/checkout');
+    expect(signedIn.container.querySelector('footer')).toHaveAttribute('data-variant', 'checkout');
   });
 
   it('full footer has the newsletter and link columns; checkout footer has support; auth footer is one row', () => {

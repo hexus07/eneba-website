@@ -1,5 +1,6 @@
 import { Link, NavLink, useLocation } from 'react-router';
 import { selectIsAuthenticated, useAuthStore } from '@/features/auth/authStore';
+import { useLogout } from '@/features/auth/api';
 import { useCartCount } from '@/features/cart/api';
 import { CartIcon, MenuIcon, UserIcon } from '@/components/ui';
 import { SearchBox } from '@/features/search/SearchBox';
@@ -32,7 +33,7 @@ function CartLink() {
 function AccountLinks() {
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const user = useAuthStore((s) => s.user);
-  const clear = useAuthStore((s) => s.clear);
+  const logout = useLogout();
 
   if (isAuthenticated) {
     return (
@@ -40,7 +41,7 @@ function AccountLinks() {
         <UserIcon className="size-icon-lg" />
         <Link to="/orders" className="hidden max-w-[140px] truncate hover:text-accent sm:inline">{user?.name ?? 'My account'}</Link>
         <span aria-hidden="true" className="hidden sm:inline">|</span>
-        <button type="button" onClick={clear} className="hover:text-accent">Log out</button>
+        <button type="button" onClick={() => void logout()} className="hover:text-accent">Log out</button>
       </div>
     );
   }
