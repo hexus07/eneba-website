@@ -23,7 +23,11 @@ async function invalidUtilities(candidates: string[]): Promise<string[]> {
 
 describe('Tailwind classes used in src/', () => {
   it('all generate CSS with the token theme', async () => {
-    const scanner = new Scanner({ sources: [{ base: `${BASE}/src`, pattern: '**/*.{ts,tsx}', negated: false }] });
+    // Test files ship no CSS (and use ids like "top-deals" that look like utilities): skip them.
+    const scanner = new Scanner({ sources: [
+      { base: `${BASE}/src`, pattern: '**/*.{ts,tsx}', negated: false },
+      { base: `${BASE}/src`, pattern: '**/*.test.{ts,tsx}', negated: true },
+    ] });
     expect(await invalidUtilities(scanner.scan())).toEqual([]);
   });
 
