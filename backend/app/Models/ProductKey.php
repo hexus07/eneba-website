@@ -66,4 +66,9 @@ class ProductKey extends Model
     {
         return $this->belongsTo(Offer::class);
     }
+
+    public function orderItem(): BelongsTo
+    {
+        return $this->belongsTo(OrderItem::class);
+    }
 }
