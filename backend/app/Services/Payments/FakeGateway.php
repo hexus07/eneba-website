@@ -6,7 +6,7 @@ use App\Models\Order;
 
 /**
  * Simulated payments: the SPA shows Approve / Decline and calls
- * POST /api/v1/payments/fake/{order}/confirm. No money, no network.
+ * POST /api/v1/checkout/{order}/confirm. No money, no network.
  */
 class FakeGateway implements PaymentGateway
 {
@@ -18,7 +18,7 @@ class FakeGateway implements PaymentGateway
     public function createPayment(Order $order): PaymentSession
     {
         return new PaymentSession('fake', 'fake_'.$order->id, [
-            'confirm_url' => url("/api/v1/payments/fake/{$order->id}/confirm"),
+            'confirm_url' => url("/api/v1/checkout/{$order->id}/confirm"),
         ]);
     }
 

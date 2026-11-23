@@ -2,20 +2,21 @@
 
 namespace Tests\Feature;
 
-use App\Enums\OrderStatus;
+use App\Models\CartItem;
 use App\Models\Offer;
 use App\Models\Order;
 use App\Models\ProductKey;
 use App\Models\User;
-use App\Services\Checkout\OrderFulfiller;
+use App\Services\Checkout\CheckoutService;
+use App\Services\Checkout\OutOfStockException;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\BuildsOrders;
 use Tests\Concerns\CommitsToDatabase;
 use Tests\TestCase;
 
 /**
- * Real concurrency against Postgres. Uses DatabaseTruncation instead of RefreshDatabase because other
- * connections/processes can't see data inside the test's uncommitted wrapping transaction.
+ * Real concurrency against Postgres. Uses committed data (CommitsToDatabase) because other
+ * connections/processes can't see data inside RefreshDatabase's uncommitted transaction.
  */
 class KeyAssignmentConcurrencyTest extends TestCase
 {
@@ -27,69 +28,71 @@ class KeyAssignmentConcurrencyTest extends TestCase
         config(['payments.driver' => 'fake']);
     }
 
-    private function pendingOrder(Offer $offer, int $quantity): Order
+    private function buyerWithCart(Offer $offer, int $quantity = 1): User
     {
-        $order = Order::factory()->create(['total_cents' => $offer->price_cents * $quantity]);
-        $order->items()->create([
-            'offer_id' => $offer->id, 'product_id' => $offer->product_id, 'product_title' => 'T', 'platform_name' => 'P',
-            'region_name' => 'R', 'seller_name' => 'S', 'unit_price_cents' => $offer->price_cents, 'quantity' => $quantity,
-        ]);
+        $buyer = User::factory()->create();
+        CartItem::create(['user_id' => $buyer->id, 'offer_id' => $offer->id, 'quantity' => $quantity]);
 
-        return $order;
+        return $buyer;
     }
 
     public function test_keys_locked_by_another_transaction_are_skipped_not_waited_on_or_reused(): void
     {
         $offer = $this->offerWithKeys(3);
         [$k1, $k2, $k3] = $offer->keys()->orderBy('id')->pluck('id')->all();
-        $orderA = $this->pendingOrder($offer, 1);
-        $orderB = $this->pendingOrder($offer, 1);
+        $alice = $this->buyerWithCart($offer);
+        $bob = $this->buyerWithCart($offer);
 
-        // Connection "other" plays a concurrent fulfillment that has locked k1 and k2 but not committed.
+        // Connection "other" plays a concurrent checkout that has locked k1 and k2 but not committed.
         config(['database.connections.other' => config('database.connections.pgsql')]);
         $other = DB::connection('other');
         $other->beginTransaction();
         $other->select('SELECT id FROM product_keys WHERE id IN (?, ?) FOR UPDATE', [$k1, $k2]);
 
-        // Without SKIP LOCKED this would block on k1; lock_timeout turns that into a test failure.
+        // Without SKIP LOCKED this would block on k1; lock_timeout turns waiting into a test failure.
         DB::statement("SET lock_timeout = '2s'");
-        $a = app(OrderFulfiller::class)->markPaid($orderA);
+        [$order] = app(CheckoutService::class)->checkout($alice, null);
 
-        $this->assertSame(OrderStatus::Completed, $a->status);
-        $this->assertSame([$k3], ProductKey::where('order_item_id', $a->items->sole()->id)->pluck('id')->all());
+        $this->assertSame([$k3], ProductKey::where('status', 'reserved')->where('order_item_id', $order->items()->sole()->id)->pluck('id')->all());
 
-        // The only remaining keys are locked by "other": B can't take them, even though they're "available".
-        $b = app(OrderFulfiller::class)->markPaid($orderB);
-        $this->assertSame(OrderStatus::Refunded, $b->status);
+        // Only locked keys remain: Bob can't take them even though they're "available".
+        try {
+            app(CheckoutService::class)->checkout($bob, null);
+            $this->fail('expected out of stock');
+        } catch (OutOfStockException $e) {
+            $this->assertSame($offer->id, $e->problems[0]['offer_id']);
+        }
+        $this->assertSame(1, Order::count(), 'no order for Bob');
 
         $other->rollBack();
         $this->assertSame([$k1, $k2], $offer->availableKeys()->orderBy('id')->pluck('id')->all());
     }
 
-    public function test_parallel_processes_never_assign_the_same_key_twice(): void
+    public function test_parallel_checkouts_never_reserve_the_same_key_twice(): void
     {
         if (! function_exists('pcntl_fork')) {
             $this->markTestSkipped('pcntl not available');
         }
 
         $keys = 6;
-        $buyers = 10;
         $offer = $this->offerWithKeys($keys);
-        $orderIds = collect(range(1, $buyers))->map(fn () => $this->pendingOrder($offer, 1)->id)->all();
+        $buyers = collect(range(1, 10))->map(fn () => $this->buyerWithCart($offer));
 
         // Children must not share the parent's socket: drop it before forking, each child reconnects.
         DB::disconnect();
         $startAt = microtime(true) + 0.5; // crude barrier so all children hit the DB at the same moment
         $pids = [];
 
-        foreach ($orderIds as $orderId) {
+        foreach ($buyers as $buyer) {
             $pid = pcntl_fork();
             if ($pid === 0) {
                 time_sleep_until($startAt);
                 try {
-                    app(OrderFulfiller::class)->markPaid(Order::findOrFail($orderId));
+                    app(CheckoutService::class)->checkout(User::findOrFail($buyer->id), null);
+                } catch (OutOfStockException) {
+                    // expected for the buyers who lose the race
                 } catch (\Throwable $e) {
-                    file_put_contents(storage_path("logs/race-{$orderId}.err"), (string) $e);
+                    file_put_contents(storage_path("logs/race-{$buyer->id}.err"), (string) $e);
                 }
                 // SIGKILL: skip PHPUnit/Laravel shutdown handlers that would write to the parent's output.
                 posix_kill(getmypid(), SIGKILL);
@@ -103,14 +106,11 @@ class KeyAssignmentConcurrencyTest extends TestCase
         $errors = glob(storage_path('logs/race-*.err'));
         $messages = array_map('file_get_contents', $errors);
         array_map('unlink', $errors);
-        $this->assertSame([], $messages, 'no child failed');
+        $this->assertSame([], $messages, 'no child failed unexpectedly');
 
-        $statuses = Order::query()->pluck('status')->countBy(fn (OrderStatus $s) => $s->value);
-        $this->assertSame($keys, $statuses['completed'] ?? 0, 'exactly one order per key completed');
-        $this->assertSame($buyers - $keys, $statuses['refunded'] ?? 0);
-        $this->assertSame($keys, ProductKey::where('status', 'sold')->distinct()->count('order_item_id'), 'one key per order item');
-        $this->assertSame($keys, ProductKey::where('status', 'sold')->count());
-        $this->assertFalse($offer->fresh()->is_active, 'sold-out offer deactivated');
-        $this->assertSame(0, User::query()->has('orders', '>', 1)->count(), 'sanity: one order per buyer');
+        $this->assertSame($keys, Order::count(), 'exactly one order per key; the rest were told it is out of stock');
+        $this->assertSame($keys, ProductKey::where('status', 'reserved')->count());
+        $this->assertSame($keys, ProductKey::where('status', 'reserved')->distinct()->count('order_item_id'), 'one key per order item');
+        $this->assertSame(0, $offer->availableKeys()->count());
     }
 }

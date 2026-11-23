@@ -15,7 +15,7 @@ class Order extends Model
 
     protected $fillable = [
         'user_id', 'status', 'total_cents', 'currency', 'payment_provider', 'payment_ref',
-        'idempotency_key', 'failure_reason', 'paid_at', 'fulfilled_at',
+        'idempotency_key', 'failure_reason', 'expires_at', 'paid_at', 'fulfilled_at',
     ];
 
     protected $attributes = ['status' => 'pending', 'currency' => 'EUR'];
@@ -27,6 +27,7 @@ class Order extends Model
             'total_cents' => 'integer',
             'paid_at' => 'datetime',
             'fulfilled_at' => 'datetime',
+            'expires_at' => 'datetime',
         ];
     }
 

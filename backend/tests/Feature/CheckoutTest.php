@@ -38,7 +38,7 @@ class CheckoutTest extends TestCase
 
         $order = Order::findOrFail($response->json('data.id'));
         $this->assertSame('fake_'.$order->id, $order->payment_ref);
-        $this->assertStringEndsWith("/payments/fake/{$order->id}/confirm", $response->json('payment.confirm_url'));
+        $this->assertStringEndsWith("/checkout/{$order->id}/confirm", $response->json('payment.confirm_url'));
 
         // Snapshot survives later listing edits.
         $a->update(['price_cents' => 9999]);
@@ -47,8 +47,12 @@ class CheckoutTest extends TestCase
         $this->assertSame(1500, $item->unit_price_cents);
         $this->assertNotSame('Renamed', $item->product_title);
 
-        // No keys touched before payment; cart kept until payment succeeds.
-        $this->assertSame(0, ProductKey::where('status', '!=', 'available')->count());
+        // Keys are reserved for this order (not sold) until it's paid or expires; cart kept until then.
+        $this->assertSame(3, ProductKey::where('status', 'reserved')->count());
+        $this->assertSame(0, ProductKey::where('status', 'sold')->count());
+        $this->assertSame(3, ProductKey::where('status', 'reserved')->whereIn('order_item_id', $order->items()->pluck('id'))->count());
+        $this->assertEqualsWithDelta(now()->addMinutes(15)->timestamp, $order->expires_at->timestamp, 5);
+        $response->assertJsonPath('data.expires_at', fn ($v) => $v !== null);
         $this->assertSame(2, CartItem::count());
     }
 
@@ -128,6 +132,7 @@ class CheckoutTest extends TestCase
             ->assertJsonPath('data.failure_reason', 'card_declined');
 
         $this->assertSame(0, ProductKey::where('status', 'sold')->count());
+        $this->assertSame(0, ProductKey::where('status', 'reserved')->count(), 'declined: keys back on sale at once');
         $this->assertSame(1, CartItem::count(), 'cart kept so the buyer can retry');
     }
 

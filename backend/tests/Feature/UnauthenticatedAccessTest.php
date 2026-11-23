@@ -30,7 +30,7 @@ class UnauthenticatedAccessTest extends TestCase
             'checkout' => ['POST', '/api/v1/checkout'],
             'order history' => ['GET', '/api/v1/orders'],
             'order detail' => ['GET', "/api/v1/orders/$uuid"],
-            'fake payment confirm' => ['POST', "/api/v1/payments/fake/$uuid/confirm"],
+            'fake payment confirm' => ['POST', "/api/v1/checkout/$uuid/confirm"],
         ];
     }
 

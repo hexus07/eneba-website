@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
+use App\Models\CartItem;
+use App\Models\Offer;
 use App\Models\Order;
 use App\Models\ProductKey;
 use App\Models\User;
@@ -10,13 +12,14 @@ use App\Services\Checkout\OrderFulfiller;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Mockery;
 use Tests\Concerns\BuildsOrders;
 use Tests\TestCase;
 
 /**
- * Single-connection scenarios. True concurrency (separate connections / processes) is in
- * KeyAssignmentConcurrencyTest, which needs committed data and so can't use RefreshDatabase.
+ * Reservation semantics on one connection. True concurrency (separate connections / processes) is
+ * in KeyAssignmentConcurrencyTest.
  */
 class KeyAssignmentTest extends TestCase
 {
@@ -28,77 +31,79 @@ class KeyAssignmentTest extends TestCase
         config(['payments.driver' => 'fake']);
     }
 
-    /** Two buyers check out the last key (stock check passes for both), then both pay. */
-    public function test_last_key_goes_to_exactly_one_order_and_the_other_is_refunded(): void
+    /** A buyer whose cart holds `$quantity` of `$offer`; returns the checkout response. */
+    private function checkoutAs(Offer $offer, int $quantity = 1): TestResponse
     {
-        $offer = $this->offerWithKeys(1);
-        $this->actingAsBuyer();
-        $first = $this->checkoutOffer($offer);
-        $this->actingAsBuyer(User::factory()->create());
-        $second = $this->checkoutOffer($offer);
+        $buyer = $this->actingAsBuyer(User::factory()->create());
+        // Directly, as if added while stock lasted (adding now would be refused by the cart's own check).
+        CartItem::create(['user_id' => $buyer->id, 'offer_id' => $offer->id, 'quantity' => $quantity]);
 
-        $this->actingAsBuyer($first->user);
-        $this->confirmFake($first)->assertJsonPath('data.status', 'completed')->assertJsonCount(1, 'data.items.0.keys');
-        $this->actingAsBuyer($second->user);
-        $this->confirmFake($second)->assertJsonPath('data.status', 'refunded')
-            ->assertJsonPath('data.failure_reason', 'out_of_stock')
-            ->assertJsonPath('data.items.0.keys', []);
-
-        $key = ProductKey::sole();
-        $this->assertSame($first->items()->sole()->id, $key->order_item_id);
-        $this->assertSame(0, ProductKey::query()->whereHas('orderItem', fn ($q) => $q->where('order_id', $second->id))->count());
+        return $this->postJson('/api/v1/checkout');
     }
 
-    public function test_multi_item_order_is_all_or_nothing(): void
+    public function test_the_last_key_is_reserved_for_the_first_buyer_and_the_second_is_told_it_is_gone(): void
+    {
+        $offer = $this->offerWithKeys(1);
+
+        $first = $this->checkoutAs($offer)->assertCreated();
+        $this->checkoutAs($offer)->assertStatus(409)
+            ->assertJsonPath('items.0.offer_id', $offer->id)
+            ->assertJsonPath('items.0.available', 0);
+
+        $this->assertSame(1, Order::count(), 'no order for the second buyer');
+        $key = ProductKey::sole();
+        $this->assertSame('reserved', $key->status->value);
+        $this->assertSame(Order::findOrFail($first->json('data.id'))->items()->sole()->id, $key->order_item_id);
+    }
+
+    public function test_checkout_is_all_or_nothing_across_items(): void
     {
         $plenty = $this->offerWithKeys(5);
         $scarce = $this->offerWithKeys(2);
-        $buyer = $this->actingAsBuyer();
+        $this->actingAsBuyer();
         $this->addToCart($plenty, 2);
         $this->addToCart($scarce, 2);
-        $order = Order::findOrFail($this->postJson('/api/v1/checkout')->assertCreated()->json('data.id'));
+        // Someone else takes one scarce key between "add to cart" and checkout.
+        $scarce->keys()->first()->update(['status' => 'sold']);
 
-        $scarce->keys()->first()->update(['status' => 'sold']); // sold elsewhere between checkout and payment
+        $this->postJson('/api/v1/checkout')->assertStatus(409)->assertJsonPath('items.0.offer_id', $scarce->id);
 
-        $this->actingAsBuyer($buyer);
-        $this->confirmFake($order)->assertJsonPath('data.status', 'refunded');
-
-        // The 2 keys of `plenty` that were assignable must have been rolled back too.
-        $this->assertSame(5, $plenty->availableKeys()->count());
-        $this->assertSame(1, $scarce->availableKeys()->count());
+        $this->assertSame(0, Order::count());
+        $this->assertSame(5, $plenty->availableKeys()->count(), 'nothing of the first item stays reserved');
     }
 
-    public function test_keys_are_never_double_assigned_across_many_orders(): void
+    public function test_paying_sells_exactly_the_reserved_keys(): void
+    {
+        $offer = $this->offerWithKeys(5);
+        $order = Order::findOrFail($this->checkoutAs($offer, 2)->json('data.id'));
+        $reserved = ProductKey::where('status', 'reserved')->orderBy('id')->pluck('id')->all();
+
+        $this->actingAsBuyer($order->user);
+        $this->confirmFake($order)->assertOk()->assertJsonPath('data.status', 'completed');
+
+        $this->assertSame($reserved, ProductKey::where('status', 'sold')->orderBy('id')->pluck('id')->all());
+        $this->assertSame(3, $offer->availableKeys()->count());
+    }
+
+    public function test_keys_are_never_double_reserved_or_sold_across_many_buyers(): void
     {
         $offer = $this->offerWithKeys(7);
-        $orders = collect(range(1, 5))->map(function () use ($offer) {
-            $this->actingAsBuyer(User::factory()->create());
+        $responses = collect(range(1, 5))->map(fn () => $this->checkoutAs($offer, 2)); // 10 wanted, 7 keys
 
-            return $this->checkoutOffer($offer, 2); // 5 × 2 = 10 wanted, 7 available
-        });
+        $this->assertSame([201, 201, 201, 409, 409], $responses->map->status()->all());
+        $this->assertSame(6, ProductKey::where('status', 'reserved')->distinct()->count('id'));
+        $this->assertSame(3, ProductKey::where('status', 'reserved')->distinct()->count('order_item_id'));
 
-        $statuses = $orders->map(fn (Order $o) => app(OrderFulfiller::class)->markPaid($o)->status);
-
-        $this->assertSame(3, $statuses->filter(fn ($s) => $s === OrderStatus::Completed)->count());
-        $this->assertSame(2, $statuses->filter(fn ($s) => $s === OrderStatus::Refunded)->count());
+        Order::all()->each(fn (Order $o) => app(OrderFulfiller::class)->markPaid($o));
         $this->assertSame(6, ProductKey::where('status', 'sold')->count());
         $this->assertSame(1, ProductKey::where('status', 'available')->count());
-        $this->assertSame(
-            ProductKey::where('status', 'sold')->count(),
-            ProductKey::where('status', 'sold')->distinct()->count('order_item_id') * 2,
-            'each completed order item holds exactly its 2 keys',
-        );
     }
 
-    public function test_failed_refund_keeps_order_claimed_and_a_retry_completes_it(): void
+    public function test_a_late_payment_whose_refund_fails_stays_claimed_and_a_retry_completes_it(): void
     {
-        $offer = $this->offerWithKeys(0);
-        $this->actingAsBuyer();
-        $order = Order::factory()->for(User::first())->create(['payment_ref' => 'pi_x']);
-        $order->items()->create([
-            'offer_id' => $offer->id, 'product_id' => $offer->product_id, 'product_title' => 'X', 'platform_name' => 'P',
-            'region_name' => 'R', 'seller_name' => 'S', 'unit_price_cents' => 100, 'quantity' => 1,
-        ]);
+        $offer = $this->offerWithKeys(1);
+        $order = Order::findOrFail($this->checkoutAs($offer)->json('data.id'));
+        $this->travel(16)->minutes(); // reservation lapsed
 
         $gateway = Mockery::mock(PaymentGateway::class);
         $gateway->shouldReceive('refund')->once()->andThrow(new \RuntimeException('Stripe down'));
@@ -107,26 +112,22 @@ class KeyAssignmentTest extends TestCase
 
         try {
             app(OrderFulfiller::class)->markPaid($order);
-            $this->fail('expected refund failure to propagate');
+            $this->fail('expected the refund failure to propagate');
         } catch (\RuntimeException) {
         }
-        // Claimed: a later stock top-up can't make a retry fulfill an order we're refunding.
         $this->assertSame(OrderStatus::Refunding, $order->fresh()->status);
-        ProductKey::factory()->create(['offer_id' => $offer->id]);
+        $this->assertSame(1, $offer->availableKeys()->count(), 'its key went back on sale');
 
         $this->assertSame(OrderStatus::Refunded, app(OrderFulfiller::class)->markPaid($order)->status);
-        $this->assertSame(1, ProductKey::where('status', 'available')->count());
     }
 
-    public function test_status_guard_prevents_overwriting_a_key_that_is_no_longer_available(): void
+    public function test_status_guard_prevents_reserving_a_key_that_is_no_longer_available(): void
     {
-        // Simulates the "impossible" case directly at the SQL level the fulfiller relies on:
-        // the UPDATE only touches rows that are still available.
         $offer = $this->offerWithKeys(1);
         $key = $offer->keys()->sole();
         DB::table('product_keys')->where('id', $key->id)->update(['status' => 'sold']);
 
-        $updated = ProductKey::whereIn('id', [$key->id])->where('status', 'available')->update(['status' => 'sold', 'order_item_id' => null]);
+        $updated = ProductKey::whereIn('id', [$key->id])->where('status', 'available')->update(['status' => 'reserved']);
 
         $this->assertSame(0, $updated);
     }

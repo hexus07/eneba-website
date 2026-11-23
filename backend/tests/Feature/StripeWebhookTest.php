@@ -102,21 +102,25 @@ class StripeWebhookTest extends TestCase
         $this->assertSame(OrderStatus::Failed, $this->order->fresh()->status);
     }
 
-    public function test_out_of_stock_after_payment_refunds_through_stripe(): void
+    public function test_payment_after_the_reservation_expired_is_refunded_and_keys_stay_released(): void
     {
-        ProductKey::query()->update(['status' => 'sold']); // all keys gone between checkout and payment
+        $this->travel(16)->minutes();
         $gateway = Mockery::mock(PaymentGateway::class);
         $gateway->shouldReceive('refund')->once()->withArgs(fn (Order $o) => $o->id === $this->order->id);
         $this->app->instance(PaymentGateway::class, $gateway);
 
         $this->deliver($this->event('payment_intent.succeeded'))->assertOk();
 
-        $this->assertSame(OrderStatus::Refunded, $this->order->fresh()->status);
+        $order = $this->order->fresh();
+        $this->assertSame(OrderStatus::Refunded, $order->status);
+        $this->assertSame('reservation_expired', $order->failure_reason);
+        $this->assertSame(0, ProductKey::where('status', 'sold')->count());
+        $this->assertSame(3, ProductKey::where('status', 'available')->count(), 'reserved keys released');
     }
 
     public function test_refund_failure_returns_5xx_so_stripe_retries_and_event_is_not_marked_processed(): void
     {
-        ProductKey::query()->update(['status' => 'sold']);
+        $this->travel(16)->minutes();
         $gateway = Mockery::mock(PaymentGateway::class);
         $gateway->shouldReceive('refund')->andThrow(new PaymentGatewayException('down'));
         $this->app->instance(PaymentGateway::class, $gateway);
@@ -125,6 +129,14 @@ class StripeWebhookTest extends TestCase
 
         $this->assertSame(OrderStatus::Refunding, $this->order->fresh()->status);
         $this->assertNull(PaymentEvent::where('provider_event_id', 'evt_1')->value('processed_at'));
+    }
+
+    public function test_canceled_payment_releases_the_reserved_keys(): void
+    {
+        $this->deliver($this->event('payment_intent.canceled', ['status' => 'canceled']))->assertOk();
+
+        $this->assertSame(OrderStatus::Failed, $this->order->fresh()->status);
+        $this->assertSame(3, ProductKey::where('status', 'available')->count());
     }
 
     public function test_event_for_unknown_intent_is_acknowledged(): void

@@ -7,6 +7,7 @@ use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\Cart\CartService;
+use App\Services\Catalog\Stock;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\PaymentGatewayException;
 use App\Services\Payments\PaymentSession;
@@ -15,14 +16,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Cart → pending order → payment session. Keys are NOT touched here; they are assigned only once the
- * payment succeeds (OrderFulfiller). Stock is checked here so buyers can't pay for what's visibly gone.
+ * Cart → pending order with RESERVED keys → payment session. Keys are held until the order's
+ * expires_at (config checkout.reservation_minutes); payment sells them (OrderFulfiller), expiry or
+ * decline releases them (KeyReservations).
  */
 class CheckoutService
 {
     public function __construct(
         private readonly CartService $cart,
         private readonly PaymentGateway $gateway,
+        private readonly KeyReservations $keys,
+        private readonly Stock $stock,
     ) {}
 
     /** @return array{0: Order, 1: ?PaymentSession} */
@@ -31,6 +35,10 @@ class CheckoutService
         if ($idempotencyKey !== null && $existing = $user->orders()->where('idempotency_key', $idempotencyKey)->first()) {
             return $this->resume($existing);
         }
+
+        // Reclaim keys from abandoned orders first, so stock isn't blocked when the scheduler is
+        // not running (Render free tier has no cron).
+        $this->keys->expireStale();
 
         $items = $this->cart->items($user);
         if ($items->isEmpty()) {
@@ -50,7 +58,21 @@ class CheckoutService
         }
 
         try {
-            $order = DB::transaction(fn () => $this->createOrder($user, $items, $idempotencyKey));
+            $order = DB::transaction(function () use ($user, $items, $idempotencyKey) {
+                $order = $this->createOrder($user, $items, $idempotencyKey);
+                $this->keys->reserve($order->load('items')); // throws → whole order rolls back
+
+                return $order;
+            });
+        } catch (InsufficientStock $e) {
+            // Lost a race for the last keys (the pre-check above passed). No order was created.
+            $item = $items->firstWhere('offer_id', $e->offerId);
+            throw new OutOfStockException([[
+                'offer_id' => $e->offerId,
+                'reason' => 'out_of_stock',
+                'requested' => $item?->quantity ?? 0,
+                'available' => $this->stock->available([$e->offerId])[$e->offerId],
+            ]]);
         } catch (UniqueConstraintViolationException) {
             // Concurrent double-submit with the same Idempotency-Key: the other request won.
             return $this->resume($user->orders()->where('idempotency_key', $idempotencyKey)->firstOrFail());
@@ -68,6 +90,7 @@ class CheckoutService
             'currency' => config('payments.currency'),
             'payment_provider' => $this->gateway->name(),
             'idempotency_key' => $idempotencyKey,
+            'expires_at' => now()->addMinutes(config('checkout.reservation_minutes')),
         ]);
 
         $order->items()->createMany($items->map(fn (CartItem $i) => [
@@ -87,6 +110,8 @@ class CheckoutService
     /** @return array{0: Order, 1: ?PaymentSession} */
     private function resume(Order $order): array
     {
+        $order = $this->keys->expireIfStale($order);
+
         return $order->isPending() ? $this->startPayment($order) : [$order, null];
     }
 

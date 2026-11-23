@@ -48,6 +48,6 @@ trait BuildsOrders
 
     protected function confirmFake(Order $order, string $outcome = 'succeed'): TestResponse
     {
-        return $this->postJson("/api/v1/payments/fake/{$order->id}/confirm", ['outcome' => $outcome]);
+        return $this->postJson("/api/v1/checkout/{$order->id}/confirm", ['outcome' => $outcome]);
     }
 }

@@ -4,7 +4,7 @@ namespace App\Services\Checkout;
 
 use RuntimeException;
 
-/** Internal: thrown inside the fulfillment transaction to roll it back. */
+/** Internal: thrown inside the checkout transaction when keys run out, to roll the order back. */
 class InsufficientStock extends RuntimeException
 {
     public function __construct(public readonly int $offerId)

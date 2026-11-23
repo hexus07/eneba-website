@@ -23,6 +23,8 @@ class OrderResource extends JsonResource
             'currency' => $this->currency,
             'payment_provider' => $this->payment_provider,
             'failure_reason' => $this->failure_reason,
+            // While pending: when the reserved keys are released if unpaid.
+            'expires_at' => $this->expires_at,
             'created_at' => $this->created_at,
             'paid_at' => $this->paid_at,
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn (OrderItem $item) => [

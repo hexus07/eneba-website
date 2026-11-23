@@ -46,6 +46,6 @@ Route::prefix('v1')->group(function () {
         // whereUuid: a malformed id is a 404 here, not a Postgres "invalid uuid" 500.
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/{order}', [OrderController::class, 'show'])->whereUuid('order');
-        Route::post('/payments/fake/{order}/confirm', [FakePaymentController::class, 'confirm'])->whereUuid('order');
+        Route::post('/checkout/{order}/confirm', [FakePaymentController::class, 'confirm'])->whereUuid('order');
     });
 });
