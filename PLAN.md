@@ -17,8 +17,8 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 | **Eneba visual fidelity** | **Deep** | Design tokens, close match on components, responsive down to 360px, skeletons, hover/focus states, mobile nav + filter drawer |
 | Homepage | Standard+ | Backend-driven layout, per-block endpoints, per-block error isolation |
 | Product page | Standard | Details, offers from multiple sellers sorted by price, seller rating, platform/region badges |
-| Checkout & keys | Standard | Cart, Stripe test mode + fake gateway, key reservation with row locking, idempotent webhook, order history, key reveal |
-| Auth | Standard | Register/login/logout, Sanctum bearer tokens, protected routes |
+| Checkout & keys | Standard+ | ✅ Cart, Stripe PaymentIntents (test) + fake gateway, keys assigned on payment success with `SKIP LOCKED`, auto-refund on oversell, idempotent webhook, order history with keys. Tested under real multi-process concurrency |
+| Auth | Standard | ✅ Register/login/logout/me, Sanctum bearer tokens (7-day expiry), rate-limited login, protected routes |
 
 **Out of scope (deliberately):** seller dashboards / listing creation, reviews authoring, wishlists, multi-currency, i18n, email delivery (keys are shown in-app), admin UI (content managed through seeders / DB).
 
@@ -74,17 +74,24 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 - Price filtering and sorting use the denormalized `products.min_price_cents`, which an `Offer` observer recomputes along with `offers_count`.
 - On the frontend, filter state lives in the URL query string as the single source of truth. That makes results shareable and keeps back/forward working.
 
-### Checkout & keys
-1. The cart is server-side for signed-in users. Guests keep a localStorage cart, which is merged with `POST /cart/merge` on login. Checkout requires auth.
-2. `POST /checkout` (with an `Idempotency-Key` header) runs in one DB transaction:
-   - re-prices the cart from current offers (never trusts client prices)
-   - reserves keys with `SELECT … FOR UPDATE SKIP LOCKED`, setting `status=reserved` and `reserved_until = now()+15m`
-   - creates a `pending` order with item snapshots
-   - asks the gateway for a session and returns `{ order_id, redirect_url }`
-3. Stripe test mode: the user goes to Stripe Checkout. The webhook `checkout.session.completed` is verified with its signature and de-duplicated via `payment_events.provider_event_id` (unique). The order becomes `paid` and its keys `sold`.
-   The fake gateway sends the user to `/checkout/fake/{order}` in the SPA, which has Approve / Decline buttons that call `POST /payments/fake/{order}/confirm`. Both gateways use the same fulfillment code.
-4. Expired reservations are released lazily: the allocator also treats `reserved` rows with `reserved_until < now()` as available. A scheduled command `keys:release-expired` exists, but nothing depends on it (Render free tier has no cron/worker).
-5. `/orders/{id}` shows keys masked. `POST /orders/{id}/keys/{key}/reveal` returns the plaintext key (stored encrypted using Laravel `encrypted` cast) and records `revealed_at`.
+### Checkout & keys (implemented)
+1. **Cart**: server-side for signed-in users (`cart_items`). Guests keep a localStorage cart, merged with `POST /cart/merge` on login (best effort: unavailable lines dropped, quantities clamped to stock). Prices are live. Adding checks stock and caps each line at 10 keys.
+2. **`POST /checkout`** (optional `Idempotency-Key` header, replays return the same order and payment):
+   - re-prices from current offers (client totals ignored) and checks stock. Any shortfall or inactive offer returns **409** `{items:[{offer_id, reason, requested, available}]}` and creates no order.
+   - creates a `pending` order with item snapshots (title, platform, region, seller, unit price). **No keys are touched yet.**
+   - asks the gateway for a payment and returns `{data: order, payment}`.
+3. **Payment**:
+   - **Stripe**: a PaymentIntent created with Stripe idempotency key `order-{id}`. The SPA confirms it with Elements using `client_secret`. The signed webhook `payment_intent.succeeded` fulfills the order, but only if `amount_received` and currency match the order. `payment_failed` keeps the order pending (Elements can retry), and `canceled` fails it.
+   - **Fake**: `POST /payments/fake/{order}/confirm {outcome: succeed|fail}`.
+   - Both go through `OrderFulfiller`.
+4. **Key assignment on success** (`OrderFulfiller::markPaid`), in one transaction:
+   - lock the order row. If it isn't `pending`, stop (duplicate webhooks and double confirms are no-ops).
+   - for each item, `SELECT … FOR UPDATE SKIP LOCKED LIMIT qty` on available keys, then `UPDATE … WHERE status='available'` with an affected-row check.
+   - mark the order `completed` and remove the purchased lines from the cart.
+   - *after commit*, deactivate offers that sold out, through Eloquent so product stats update. (Inside the transaction, concurrent buyers of the last keys can't see each other's sales.)
+5. **Oversell** (stock ran out between checkout and payment): the whole assignment rolls back, all or nothing. The order is claimed `pending → refunding` under the row lock *before* the provider call, so a retry can't fulfill an order being refunded. Then the gateway refund runs (Stripe idempotency key `refund-{id}`) and the order becomes `refunded`. If the refund call fails, the webhook returns 5xx, Stripe redelivers, and the refund resumes.
+6. **Order history** (`GET /orders`, `GET /orders/{id}`) returns plaintext keys for the owner's `completed` orders, with `Cache-Control: no-store`. Other users' orders return 404.
+7. No reservations, so nothing expires: an abandoned `pending` order holds no stock.
 
 ### Auth
 - Sanctum personal access tokens sent as `Authorization: Bearer`. The frontend and API are on different domains, so tokens avoid cross-site cookie and CSRF problems.
@@ -126,25 +133,25 @@ offers(
 product_keys(
   id, offer_id FK (RESTRICT: sold keys outlive offers), code TEXT (encrypted cast),
   code_hash CHAR(64) UNIQUE,   -- HMAC-SHA256(APP_KEY, normalized code): ciphertext is random, so this enforces uniqueness
-  status ENUM(available, reserved, sold),
-  reserved_until TIMESTAMP NULL, order_item_id FK NULL, revealed_at NULL,
+  status ENUM(available, reserved, sold),   -- `reserved` unused for now (keys are assigned on payment success)
+  reserved_until TIMESTAMP NULL, order_item_id FK → order_items NULL, revealed_at NULL,
   created_at
 )
   INDEX(offer_id, status)
 
-carts(id, user_id FK UNIQUE, updated_at)
-cart_items(id, cart_id FK, offer_id FK, quantity, UNIQUE(cart_id, offer_id))
+cart_items(id, user_id FK, offer_id FK, quantity CHECK > 0, UNIQUE(user_id, offer_id))   -- one cart per user: no carts table
 
 orders(
-  id UUID, user_id FK, status ENUM(pending, paid, failed, expired),
-  total_cents, currency, payment_provider, payment_ref NULL,
-  idempotency_key UNIQUE NULL, paid_at NULL, created_at, updated_at
+  id UUID, user_id FK, status CHECK IN (pending, completed, failed, refunding, refunded),
+  total_cents, currency, payment_provider, payment_ref UNIQUE NULL, idempotency_key NULL,
+  failure_reason NULL, paid_at NULL, fulfilled_at NULL, created_at, updated_at
 )
+  UNIQUE(user_id, idempotency_key), INDEX(user_id, created_at)
 order_items(
   id, order_id FK, offer_id FK, product_id FK,
-  product_title, seller_name, unit_price_cents, quantity      -- snapshot
+  product_title, platform_name, region_name, seller_name, unit_price_cents, quantity      -- snapshot
 )
-payment_events(id, provider, provider_event_id UNIQUE, type, payload jsonb, processed_at)
+payment_events(id, provider, provider_event_id UNIQUE, type, payload jsonb, processed_at)   -- audit + dedupe fast path
 
 banners(id, title, subtitle, image_url, cta_label, cta_url, position, starts_at NULL, ends_at NULL, is_active)
 home_blocks(id, key UNIQUE, type, title, position, config jsonb, is_active)
@@ -153,11 +160,11 @@ personal_access_tokens  -- Sanctum
 
 **Key modelling decision:** one `product` is one sellable variant (title × platform × region), the way Eneba lists "Elden Ring (PC) Steam Key GLOBAL". This keeps filtering simple. Product pages link to sibling variants (same title, other platform/region) through a `group_slug` column, added only if time allows.
 
-**Offer stats:** `products.min_price_cents` and `offers_count` are the cheapest price and number of **active** offers. `OfferObserver` keeps them in sync on Eloquent create/update/delete (`Services/Catalog/OfferStats`). It always recomputes from `offers`, after taking a `FOR NO KEY UPDATE` lock on the product so concurrent writers can't store stale values. Mass query-builder updates skip observers, so run `php artisan catalog:sync-offer-stats` after them. Sold-out handling: checkout (M7) deactivates an offer when its last key is reserved, and the observer then updates the product.
+**Offer stats:** `products.min_price_cents` and `offers_count` are the cheapest price and number of **active** offers. `OfferObserver` keeps them in sync on Eloquent create/update/delete (`Services/Catalog/OfferStats`). It always recomputes from `offers`, after taking a `FOR NO KEY UPDATE` lock on the product so concurrent writers can't store stale values. Mass query-builder updates skip observers, so run `php artisan catalog:sync-offer-stats` after them. Sold-out handling: fulfillment deactivates an offer once its last key is sold, and the observer then updates the product.
 
 **Money:** always integer cents plus a currency. Single currency (EUR) for now.
 
-**Seed data** (`CatalogSeeder`, data in `database/seeders/data/catalog.php`; deterministic RNG seed): 91 titles (83 games, 2 DLC, 6 gift cards/subscriptions) → 312 platform × region products, 8 platforms, 5 regions, 17 genres, 12 fictional sellers, 1,212 offers (2–6 per product, about 8% inactive, about 50% with a "was" price), and 13,854 fake keys (`XXXXX-XXXXX-XXXXX`). Sales counts decay with popularity. Demo user: `demo@example.com` / `password`. Covers come from public Steam CDN header images and fall back to placeholders. No Eneba-owned assets (logo, artwork) are used.
+**Seed data** (`CatalogSeeder`, data in `database/seeders/data/catalog.php`; deterministic RNG seed): 91 titles (83 games, 2 DLC, 6 gift cards/subscriptions) → 323 platform × region products, 8 platforms, 5 regions, 17 genres, 12 fictional sellers, 1,277 offers (2–6 per product, about 8% inactive, about 50% with a "was" price), and 14,823 fake keys (`XXXXX-XXXXX-XXXXX`). Sales counts decay with popularity. Demo user: `demo@example.com` / `password`. Covers come from public Steam CDN header images and fall back to placeholders. No Eneba-owned assets (logo, artwork) are used.
 
 ---
 
@@ -168,8 +175,8 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 ### Auth
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| POST | `/auth/register` | – | `{name, email, password, password_confirmation}` → `{ data: user, token }` |
-| POST | `/auth/login` | – | `{email, password}` → `{ data: user, token }` |
+| POST | `/auth/register` | – | `{name, email, password, password_confirmation}` → 201 `{ data: user, token }`. Password ≥ 8 chars with letters and numbers. Throttled 5/min |
+| POST | `/auth/login` | – | `{email, password}` → `{ data: user, token }`. Same 422 for unknown email and wrong password. Throttled 5/min per email+IP |
 | POST | `/auth/logout` | ✓ | revokes current token |
 | GET | `/auth/me` | ✓ | current user |
 
@@ -191,7 +198,7 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/cart` | items with live prices + stock, totals |
-| POST | `/cart/items` | `{ offer_id, quantity }` (upsert) |
+| POST | `/cart/items` | `{ offer_id, quantity? }`: adds to the existing line. 422 if inactive, over stock or over 10 |
 | PATCH | `/cart/items/{id}` | `{ quantity }` |
 | DELETE | `/cart/items/{id}` | |
 | POST | `/cart/merge` | `{ items: [{ offer_id, quantity }] }` (guest cart on login) |
@@ -199,12 +206,11 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 ### Checkout, payments, orders (auth unless noted)
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/checkout` | header `Idempotency-Key`; → `{ order_id, redirect_url }`; 409 if out of stock |
-| POST | `/payments/stripe/webhook` | **no auth**, Stripe signature verified |
-| POST | `/payments/fake/{order}/confirm` | `{ outcome: approve \| decline }`; only when `PAYMENT_DRIVER=fake` |
-| GET | `/orders` | paginated history |
-| GET | `/orders/{id}` | order + items + masked keys (when paid) |
-| POST | `/orders/{id}/keys/{key}/reveal` | plaintext key, sets `revealed_at` |
+| POST | `/checkout` | optional header `Idempotency-Key`. → 201 `{ data: order, payment: {provider, client_secret, publishable_key} \| {provider, confirm_url} }` (200 on replay). 409 out of stock / unavailable, 422 empty cart, 502 provider down |
+| POST | `/payments/stripe/webhook` | **no auth**, Stripe signature verified. Handles `payment_intent.succeeded / payment_failed / canceled` |
+| POST | `/payments/fake/{order}/confirm` | `{ outcome: succeed \| fail }`. 404 unless `PAYMENT_DRIVER=fake` |
+| GET | `/orders` | paginated history (10/page), newest first, **plaintext keys** for completed orders, `no-store` |
+| GET | `/orders/{id}` | same shape for one order. Another user's order returns 404 |
 
 ---
 
@@ -292,7 +298,9 @@ CORS: allow only the Vercel origin(s) and `localhost:5173`. Known limitation: on
 | Product granularity | Variant = title × platform × region | Product + variants tables | Matches Eneba listings, simple filters. Cost: duplicated descriptions |
 | Auth transport | Bearer tokens | Sanctum cookies via Vercel proxy | Simple cross-domain setup. Cost: token in localStorage (XSS exposure) |
 | Payments | Stripe test + Fake gateway behind one interface | Fake only | Real webhook/idempotency flow. Fake keeps local dev and tests offline |
-| Background jobs | Sync fulfillment + lazy reservation expiry | Queue worker | Render free tier has no worker. Fine at demo scale |
+| Background jobs | Sync fulfillment in the webhook request | Queue worker | Render free tier has no worker. Fine at demo scale |
+| When keys are taken | Assigned on payment success (`SKIP LOCKED`), auto-refund on oversell | Reserve at checkout with expiry | No reservation expiry or cleanup job, and abandoned checkouts hold no stock. Cost: in a race for the last keys, a buyer can pay and then be refunded instead of being told "sold out" before paying (checkout's stock check makes this rare) |
+| Keys in history | Returned in order responses (`no-store`) | Masked + reveal endpoint | Simpler UX and API. Cost: keys travel on every history load. `revealed_at` is kept for a future reveal flow |
 | Filter state | URL query string | Client store | Shareable links, back button works |
 
 ---
@@ -305,8 +313,8 @@ CORS: allow only the Vercel origin(s) and `localhost:5173`. Known limitation: on
 4. **M3 Store + Search (deep):** `ProductSearch`, `ProductFilter`, `FacetBuilder` + tests. StorePage with URL-synced filters, drawer, pagination, autocomplete, did-you-mean.
 5. **M4 Homepage:** home_blocks, providers, `/home` endpoints. Block registry with isolated loading and error states.
 6. **M5 Product page:** details and offers list, add to cart.
-7. **M6 Auth + Cart:** register/login, protected routes, guest cart and merge.
-8. **M7 Checkout:** CheckoutService, KeyAllocator, Fake then Stripe gateway, webhook, orders, key reveal.
+7. **M6 Auth + Cart:** ✅ register/login, protected routes, guest cart and merge.
+8. **M7 Checkout:** ✅ CheckoutService, OrderFulfiller, Fake + Stripe gateway, webhook, orders with keys.
 9. **M8 Polish & deploy:** responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
 
 ## 10. Open questions / later

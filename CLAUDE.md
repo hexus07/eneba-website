@@ -27,6 +27,9 @@ Run the relevant tests, typecheck and lint before calling a task done.
 - Never trust client prices. Re-price from `offers` at checkout.
 - Wrap multi-step writes in `DB::transaction`. Lock keys with `lockForUpdate()->skipLocked()`.
 - Webhooks must be idempotent (`payment_events.provider_event_id` unique) and signature-verified.
+- Key assignment lives only in `OrderFulfiller` (lock order row → `FOR UPDATE SKIP LOCKED` keys → status-guarded UPDATE). Never call a payment provider while holding row locks.
+- Order/cart lookups are scoped through `$request->user()->orders()` / `cartItems()`, so another user's id returns 404. UUID route params use `whereUuid`.
+- Tests that need committed data (multiple connections/processes) use `Tests\Concerns\CommitsToDatabase`, not bare `DatabaseTruncation`, which leaks rows into later tests.
 - Product key codes use the `encrypted` cast. Never log them or include them in list endpoints.
 - Search logic lives only in `Services/Search/ProductSearch`. Catalog `q` and `/search/suggest` both use it. Tunables go in `config/search.php`.
 - Every migration includes the indexes its query patterns need (see PLAN.md §3).
@@ -58,4 +61,4 @@ Run the relevant tests, typecheck and lint before calling a task done.
 ## Deploy notes
 - Neon: use the pooled URL for the app (`PDO::ATTR_EMULATE_PREPARES => true`) and the direct URL for migrations.
 - Render: Docker image, `migrate --force` on release, health check `/up`. CORS allows only the Vercel origin and `localhost:5173`.
-- Stripe is in test mode only. `PAYMENT_DRIVER=fake|stripe`.
+- Stripe is in test mode only. `PAYMENT_DRIVER=fake|stripe`. Locally, forward webhooks with `stripe listen --forward-to localhost:8000/api/v1/payments/stripe/webhook`.
