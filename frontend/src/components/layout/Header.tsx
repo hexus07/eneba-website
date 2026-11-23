@@ -1,8 +1,8 @@
-import { useState, type SubmitEvent } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router';
+import { Link, NavLink, useLocation } from 'react-router';
 import { selectIsAuthenticated, useAuthStore } from '@/features/auth/authStore';
 import { selectGuestCartCount, useGuestCartStore } from '@/features/cart/guestCartStore';
-import { CartIcon, MenuIcon, SearchIcon, UserIcon } from '@/components/ui';
+import { CartIcon, MenuIcon, UserIcon } from '@/components/ui';
+import { SearchBox } from '@/features/search/SearchBox';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { Wordmark } from './Wordmark';
 
@@ -13,35 +13,6 @@ const NAV_LINKS = [
   { to: '/store?type=gift_card', label: 'eGift Cards' },
   { to: '/store?type=subscription', label: 'Subscriptions' },
 ];
-
-/** Layout (width, visibility) belongs to the caller's wrapper; this only draws the field. */
-function SearchForm({ idSuffix }: { idSuffix: string }) {
-  const navigate = useNavigate();
-  const [q, setQ] = useState('');
-  const inputId = `site-search-${idSuffix}`;
-
-  const submit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const query = q.trim();
-    void navigate(query ? `/store?q=${encodeURIComponent(query)}` : '/store');
-  };
-
-  return (
-    <form role="search" onSubmit={submit} className="flex h-control-lg w-full items-center gap-12 border border-line-default/70 px-15 focus-within:border-fg-primary">
-      <label htmlFor={inputId} className="sr-only">Search for games, top-ups and more</label>
-      <SearchIcon className="size-icon-lg shrink-0 text-fg-primary" />
-      <input
-        id={inputId}
-        type="search"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search for games, top-ups and more"
-        autoComplete="off"
-        className="min-w-0 flex-1 bg-transparent text-h2-sm font-medium text-fg-primary outline-none placeholder:text-fg-tertiary"
-      />
-    </form>
-  );
-}
 
 function CartLink() {
   // Signed-in cart count comes from the server cart (M6 wiring); guest cart for now.
@@ -85,13 +56,18 @@ function AccountLinks() {
 }
 
 export function Header() {
+  // On /store the box shows the current search, so the text and the URL never disagree. Keyed by it,
+  // the box resets when the URL's q changes (Back, "did you mean", Clear) but not while typing.
+  const location = useLocation();
+  const storeQuery = location.pathname === '/store' ? (new URLSearchParams(location.search).get('q') ?? '') : '';
+
   return (
     <header>
       <div className="bg-canvas-base">
         <div className="mx-auto flex h-header max-w-content items-center gap-20 px-15 xl:px-0">
           <Wordmark className="shrink-0" />
           <div className="hidden max-w-[550px] flex-1 md:block">
-            <SearchForm idSuffix="desktop" />
+            <SearchBox key={storeQuery} idSuffix="desktop" initialValue={storeQuery} />
           </div>
           <div className="hidden lg:block">
             <LocaleSwitcher />
@@ -102,7 +78,7 @@ export function Header() {
           </div>
         </div>
         <div className="px-15 pb-15 md:hidden">
-          <SearchForm idSuffix="mobile" />
+          <SearchBox key={storeQuery} idSuffix="mobile" initialValue={storeQuery} />
         </div>
       </div>
       <nav aria-label="Main" className="bg-canvas-header">

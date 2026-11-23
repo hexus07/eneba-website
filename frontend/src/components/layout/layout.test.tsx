@@ -34,7 +34,7 @@ describe('Header', () => {
 
   it('search submits to the store with the query', async () => {
     const { router } = renderApp('/');
-    const [input] = screen.getAllByRole('searchbox');
+    const [input] = screen.getAllByRole('combobox', { name: 'Search for games, top-ups and more' });
     if (!input) throw new Error('no search box');
 
     await userEvent.type(input, 'elden ring{Enter}');
