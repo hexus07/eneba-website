@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
+
+class AuthController extends Controller
+{
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        $user = User::create($request->validated()); // password cast: hashed
+
+        return $this->withToken($user, 201);
+    }
+
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $user = User::query()->where('email', $request->validated('email'))->first();
+
+        // Same message whether the email exists or not (no account enumeration).
+        if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
+            throw ValidationException::withMessages(['email' => __('auth.failed')]);
+        }
+
+        return $this->withToken($user, 200);
+    }
+
+    public function me(Request $request): UserResource
+    {
+        return new UserResource($request->user());
+    }
+
+    public function logout(Request $request): Response
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->noContent();
+    }
+
+    private function withToken(User $user, int $status): JsonResponse
+    {
+        return response()->json([
+            'data' => new UserResource($user),
+            'token' => $user->createToken('spa')->plainTextToken,
+        ], $status);
+    }
+}
