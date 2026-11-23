@@ -26,7 +26,7 @@ export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
           <CheckIcon className="size-icon-sm" strokeWidth={3} />
         </span>
       </span>
-      <span>{label}</span>
+      <span className="flex-1">{label}</span>
     </label>
   );
 }

@@ -103,7 +103,7 @@ describe('AppLayout footer variants by route', () => {
 describe('/dev/ui', () => {
   it('renders every component section', () => {
     renderApp('/dev/ui');
-    for (const name of ['Button', 'Badge', 'PriceTag', 'ProductCard', 'SectionHeading', 'TextInput', 'Checkbox', 'QuantityStepper', 'Spinner', 'Skeleton', 'LocaleSwitcher', 'Footer']) {
+    for (const name of ['Button', 'Badge', 'PriceTag', 'ProductCard', 'SectionHeading', 'TextInput', 'Checkbox', 'QuantityStepper', 'Spinner', 'Skeleton', 'Select', 'Chip', 'Pagination', 'Drawer', 'LocaleSwitcher', 'Footer']) {
       expect(screen.getByRole('region', { name })).toBeInTheDocument();
     }
   });

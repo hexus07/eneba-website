@@ -2,8 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { Footer } from '@/components/layout/Footer';
 import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher';
 import {
-  Badge, Button, CartIcon, Checkbox, PriceTag, ProductCard, ProductCardSkeleton, QuantityStepper,
-  SectionHeading, Skeleton, SkeletonText, Spinner, TextInput,
+  Badge, Button, CartIcon, Checkbox, Chip, Drawer, Pagination, PriceTag, ProductCard, ProductCardSkeleton,
+  QuantityStepper, SectionHeading, Select, Skeleton, SkeletonText, Spinner, TextInput,
 } from '@/components/ui';
 import { useGuestCartStore } from '@/features/cart/guestCartStore';
 
@@ -35,6 +35,9 @@ const BROKEN = 'https://example.invalid/missing.jpg';
 export function UiShowcasePage() {
   const [qty, setQty] = useState(1);
   const [remember, setRemember] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sort, setSort] = useState('popular');
+  const [chips, setChips] = useState(['Steam', 'Europe', 'RPG']);
   const addToCart = useGuestCartStore((s) => s.add);
 
   return (
@@ -134,6 +137,40 @@ export function UiShowcasePage() {
           <Skeleton className="h-40 w-card" />
           <SkeletonText lines={3} className="w-card" />
         </Row>
+      </Section>
+
+      <Section title="Select">
+        <Row label="inline label (store sort)">
+          <Select label="Sort by" value={sort} onChange={(e) => setSort(e.target.value)} options={[
+            { value: 'popular', label: 'Most popular' }, { value: 'price_asc', label: 'Price: low to high' }, { value: 'newest', label: 'Newest' },
+          ]} />
+        </Row>
+      </Section>
+
+      <Section title="Chip">
+        <Row label="active filters (click to remove)">
+          {chips.map((c) => <Chip key={c} label={c} onRemove={() => setChips((all) => all.filter((x) => x !== c))} />)}
+          {chips.length === 0 && <Button variant="outline" size="sm" onClick={() => setChips(['Steam', 'Europe', 'RPG'])}>Reset chips</Button>}
+        </Row>
+      </Section>
+
+      <Section title="Pagination">
+        <Row label="page 5 of 20 / page 1 of 3">
+          <Pagination page={5} lastPage={20} hrefFor={(p) => `/dev/ui?page=${p}`} />
+          <Pagination page={1} lastPage={3} hrefFor={(p) => `/dev/ui?page=${p}`} />
+        </Row>
+      </Section>
+
+      <Section title="Drawer">
+        <Row label="mobile filters panel">
+          <Button variant="outline" onClick={() => setDrawerOpen(true)}>Open drawer</Button>
+        </Row>
+        <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="Filters" footer={<Button fullWidth onClick={() => setDrawerOpen(false)}>Show 120 results</Button>}>
+          <div className="flex flex-col gap-15 p-20">
+            <Checkbox label="Steam" />
+            <Checkbox label="PSN" />
+          </div>
+        </Drawer>
       </Section>
 
       <Section title="LocaleSwitcher">
