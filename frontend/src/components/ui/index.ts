@@ -9,6 +9,7 @@ export { Pagination } from './Pagination';
 export { pageWindow } from './pageWindow';
 export { PriceTag } from './PriceTag';
 export { ProductCard, ProductCardSkeleton, type ProductCardProps } from './ProductCard';
+export { ScrollRow } from './ScrollRow';
 export { QuantityStepper } from './QuantityStepper';
 export { SectionHeading } from './SectionHeading';
 export { Select } from './Select';
