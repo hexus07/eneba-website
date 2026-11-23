@@ -309,7 +309,7 @@ CORS: allow only the Vercel origin(s) and `localhost:5173`. Known limitation: on
 
 1. **M0 Scaffolding:** monorepo, docker-compose Postgres, Laravel API skeleton + Sanctum, Vite/Tailwind app, apiClient, CI lint/test.
 2. **M1 Data:** ✅ migrations, models, factories, realistic seeders, Offer observer.
-3. **M2 Design system:** sample eneba.com, finalize tokens, build `components/ui`, AppLayout (header/footer).
+3. **M2 Design system:** ✅ `frontend/` scaffold, tokens → Tailwind theme (palette and spacing replaced, enforced by lint and tests), `components/ui` (Button ×4, Badge ×4, PriceTag, ProductCard with hover add-to-cart, SectionHeading, TextInput, Checkbox, QuantityStepper, Spinner, Skeleton), AppLayout with Header and Footer Full/Checkout/Auth, `/dev/ui` showcase, `apiClient`, `money`. Open: font family and brand name to confirm (§10). Planned: sample eneba.com, finalize tokens, build `components/ui`, AppLayout (header/footer).
 4. **M3 Store + Search (deep):** `ProductSearch`, `ProductFilter`, `FacetBuilder` + tests. StorePage with URL-synced filters, drawer, pagination, autocomplete, did-you-mean.
 5. **M4 Homepage:** home_blocks, providers, `/home` endpoints. Block registry with isolated loading and error states.
 6. **M5 Product page:** details and offers list, add to cart.
@@ -318,5 +318,7 @@ CORS: allow only the Vercel origin(s) and `localhost:5173`. Known limitation: on
 9. **M8 Polish & deploy:** responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
 
 ## 10. Open questions / later
+- **Seeded covers are landscape.** `CatalogSeeder` stores Steam's `header.jpg` (460×215), but product cards are portrait 4:5 like Eneba's, so covers are heavily cropped. Steam's `library_600x900.jpg` (portrait) fits and is what `/dev/ui` uses. Switch the seeder (backend change, not done in M2).
+- **Font family unconfirmed.** tokens.json says Inter (now self-hosted via `@fontsource-variable/inter`), but the screens look like a geometric sans (Metropolis-like), and FIGMA_CLEANUP.md §8 warns the import may have substituted it. One-line change in `design-tokens.ts` once checked on eneba.com.
 - Variant switching on the product page (`group_slug`) if time permits.
 - Price history / "lowest in 30 days" badge: nice-to-have, not planned.

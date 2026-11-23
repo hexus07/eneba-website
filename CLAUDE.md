@@ -3,7 +3,8 @@
 Eneba-style digital-key marketplace. **Read `PLAN.md` first.** It is the source of truth for scope, data model and API. Update it when a decision changes.
 
 ## Layout
-- `frontend/`: React 18 + TypeScript + Vite + Tailwind, TanStack Query, React Router, Zustand
+- `frontend/`: React 19 + TypeScript 6.0 (strict) + Vite 8 + Tailwind 4 (JS config via `@config`), TanStack Query, React Router 7, Zustand, ESLint (typescript-eslint strict), Vitest + Testing Library
+- `design/`: `tokens.json` (DTCG, the only source of design values), `FIGMA_CLEANUP.md` (naming map, reference-only artwork), `screens/` (eneba.com reference captures, **never commit or ship them**)
 - `backend/`: Laravel 13, API only, PostgreSQL, Sanctum bearer tokens
 - `docker-compose.yml`: local Postgres
 
@@ -13,8 +14,8 @@ brew services start postgresql@16          # local Postgres :5432 (dbs: eneba, e
 cd backend  && composer install && php artisan migrate:fresh --seed && php artisan serve   # :8000 (demo@example.com / password)
 cd backend  && php artisan test            # PHPUnit, against local Postgres db `eneba_test`
 cd backend  && ./vendor/bin/pint           # PHP formatting
-cd frontend && npm i && npm run dev        # :5173
-cd frontend && npm run typecheck && npm run lint && npm run test
+cd frontend && npm i && npm run dev        # :5173 (UI kit at /dev/ui); VITE_API_URL in .env.local
+cd frontend && npm run typecheck && npm run lint && npm test && npm run build
 ```
 Run the relevant tests, typecheck and lint before calling a task done.
 
@@ -44,7 +45,10 @@ Run the relevant tests, typecheck and lint before calling a task done.
 - Server state uses TanStack Query (query keys: `['products', params]`, `['product', slug]`, `['home']`, `['home-block', key]`, ...). Zustand only holds auth token and guest cart.
 - Catalog filters, sort, page and `q` live in the **URL query string**. Don't duplicate them in state.
 - **Homepage renders only what the backend sends.** Block order, titles and content come from `/home` and `/home/blocks/{key}`. Map `type → component` in `blockRegistry.ts`. Unknown types render nothing. Each block gets its own Suspense/skeleton and error boundary.
-- Styling uses only Tailwind design tokens from `tailwind.config.ts`. No raw hex values or inline styles in features. Reuse `components/ui` before creating new primitives.
+- Styling uses only Tailwind design tokens. `design/tokens.json` → `frontend/design-tokens.ts` → `tailwind.config.ts`, and the theme **replaces** Tailwind's colors and spacing (`bg-red-500`, `p-7` don't exist). Enforced three ways: ESLint bans hex literals, `no-raw-hex.test.ts` scans CSS/HTML/config, and `tailwind-classes.test.ts` fails on classes that generate no CSS. No inline styles. Reuse `components/ui` before creating new primitives.
+- Token → class names: `color.bg.*` → `canvas-*` (`bg-canvas-base`), `color.text.*` → `fg-*` (`text-fg-muted`), `color.border.*` → `line-*`; `surface`, `overlay`, `accent`, `success`, `danger` keep their names. Spacing keys are px (`p-15` = 15px). Typography tokens are font sizes that also set line height and weight (`text-price-lg`, `text-title-card`). Component dimensions measured from the screens (`h-header`, `w-card`, `h-control-lg`, `max-w-content`) live in `theme.extend`, separate from tokens.
+- `cn()` only joins classes, it does not resolve conflicts. Never pass a utility via `className` that the component already sets (display, font size…): put responsive visibility on a wrapper element, or add a prop (`size`, `variant`).
+- Third-party/Eneba artwork marked "(reference — do not export)" in FIGMA_CLEANUP.md (logo, banners, payment and app-store logos, PC Mag, Trustpilot) is never reproduced. Icons are our own stroke SVGs in `components/ui/icons.tsx`.
 - Mobile-first and responsive down to 360px. Every async view has loading (skeleton), empty and error states.
 - Use strict TypeScript and no `any`. API types live in each feature's `types.ts` and mirror the Laravel Resources.
 - Format money only with `lib/money.ts`.
@@ -52,7 +56,7 @@ Run the relevant tests, typecheck and lint before calling a task done.
 
 ## Styling / branding
 - Match Eneba's look and feel (colors, typography, spacing, components) via tokens.
-- Do **not** copy Eneba's logo, illustrations or other copyrighted assets. Use a text wordmark and seed covers from public sources or placeholders.
+- Do **not** copy Eneba's logo, illustrations or other copyrighted assets. Use a text wordmark (`src/app/brand.ts`) and seed covers from public sources or placeholders.
 
 ## Git
 - Small, focused commits in imperative mood (`Add product search service`). Branch off `main` for each milestone (`m3-store-search`).
