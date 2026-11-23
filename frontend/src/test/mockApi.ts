@@ -20,5 +20,11 @@ export function mockApi(handler: Handler) {
   return requests;
 }
 
+/** JSON body of the n-th fetch call (for POST/PATCH assertions). */
+export function requestBody(n = 0): unknown {
+  const body = vi.mocked(fetch).mock.calls[n]?.[1]?.body;
+  return typeof body === 'string' ? JSON.parse(body) : undefined;
+}
+
 /** "/products" for http://localhost:8000/api/v1/products?… */
 export const apiPath = (url: URL) => url.pathname.replace(new URL(API_BASE).pathname, '');

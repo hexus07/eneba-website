@@ -10,6 +10,8 @@ export interface GuestCartLine {
 interface GuestCartState {
   lines: GuestCartLine[];
   add: (offerId: number, quantity?: number) => void;
+  setQuantity: (offerId: number, quantity: number) => void;
+  remove: (offerId: number) => void;
   clear: () => void;
 }
 
@@ -27,6 +29,9 @@ export const useGuestCartStore = create<GuestCartState>()(
               : [...lines, { offerId, quantity }],
           };
         }),
+      setQuantity: (offerId, quantity) =>
+        set(({ lines }) => ({ lines: lines.map((l) => (l.offerId === offerId ? { ...l, quantity } : l)) })),
+      remove: (offerId) => set(({ lines }) => ({ lines: lines.filter((l) => l.offerId !== offerId) })),
       clear: () => set({ lines: [] }),
     }),
     { name: 'guest-cart', storage: persistStorage },

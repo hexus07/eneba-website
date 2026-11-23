@@ -5,7 +5,7 @@ import {
   Badge, Button, CartIcon, Checkbox, Chip, Drawer, Pagination, PriceTag, ProductCard, ProductCardSkeleton,
   QuantityStepper, SectionHeading, Select, Skeleton, SkeletonText, Spinner, TextInput,
 } from '@/components/ui';
-import { useGuestCartStore } from '@/features/cart/guestCartStore';
+import { useAddToCart } from '@/features/cart/api';
 
 /** /dev/ui: every component and variant on one page, for visual review against design/screens. */
 
@@ -38,7 +38,8 @@ export function UiShowcasePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sort, setSort] = useState('popular');
   const [chips, setChips] = useState(['Steam', 'Europe', 'RPG']);
-  const addToCart = useGuestCartStore((s) => s.add);
+  const add = useAddToCart();
+  const addToCart = (offerId: number) => add(offerId, 'Demo product');
 
   return (
     <div className="mx-auto flex max-w-content flex-col gap-40 px-15 py-40 xl:px-0">

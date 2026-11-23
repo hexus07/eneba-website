@@ -1,6 +1,6 @@
 import { Link, NavLink, useLocation } from 'react-router';
 import { selectIsAuthenticated, useAuthStore } from '@/features/auth/authStore';
-import { selectGuestCartCount, useGuestCartStore } from '@/features/cart/guestCartStore';
+import { useCartCount } from '@/features/cart/api';
 import { CartIcon, MenuIcon, UserIcon } from '@/components/ui';
 import { SearchBox } from '@/features/search/SearchBox';
 import { CheckoutStepper } from './CheckoutStepper';
@@ -16,8 +16,7 @@ const NAV_LINKS = [
 ];
 
 function CartLink() {
-  // Signed-in cart count comes from the server cart (M6 wiring); guest cart for now.
-  const count = useGuestCartStore(selectGuestCartCount);
+  const count = useCartCount();
   return (
     <Link to="/cart" className="relative inline-flex text-fg-primary hover:text-accent" aria-label={count ? `Cart, ${count} item${count === 1 ? '' : 's'}` : 'Cart, empty'}>
       <CartIcon className="size-icon-lg" />

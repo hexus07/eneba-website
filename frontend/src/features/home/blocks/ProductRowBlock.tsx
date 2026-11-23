@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { buttonClasses, ProductCard, ProductCardSkeleton, ScrollRow, SectionHeading, Skeleton } from '@/components/ui';
 import { toCardProps } from '@/features/catalog/toCardProps';
-import { useGuestCartStore } from '@/features/cart/guestCartStore';
+import { useAddToCart } from '@/features/cart/api';
 import { useHomeBlock } from '../api';
 import type { DealsPayload, HomeLayoutBlock, ProductRowPayload } from '../types';
 
@@ -41,7 +41,7 @@ export function ProductRowBlock({ block }: { block: HomeLayoutBlock }) {
 /** deals: discounted offer per product; cards can add that offer to the cart. */
 export function DealsBlock({ block }: { block: HomeLayoutBlock }) {
   const { data } = useHomeBlock<DealsPayload>(block.key);
-  const add = useGuestCartStore((s) => s.add);
+  const addToCart = useAddToCart();
   if (data.items.length === 0) return null;
   return (
     <RowSection block={block} seeAllUrl={data.see_all_url}>
@@ -51,7 +51,7 @@ export function DealsBlock({ block }: { block: HomeLayoutBlock }) {
             {...toCardProps(p)}
             priceCents={p.deal.price_cents}
             originalPriceCents={p.deal.original_price_cents}
-            onAddToCart={() => add(p.deal.offer_id)}
+            onAddToCart={() => addToCart(p.deal.offer_id, p.title)}
             className="h-full"
           />
         </li>
