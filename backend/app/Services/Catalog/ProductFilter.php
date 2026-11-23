@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Services\Search\ProductSearch;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -48,18 +49,45 @@ class ProductFilter
         $perPage = (int) ($params['per_page'] ?? 24);
         $page = (int) ($params['page'] ?? 1);
 
-        if ($q === '' || ! $this->search->usesFuzzy($q)) {
-            return $query->paginate($perPage, ['*'], 'page', $page);
+        return $this->withSearchThreshold($q, fn () => $query->paginate($perPage, ['*'], 'page', $page));
+    }
+
+    /**
+     * Header autocomplete: same matching and ranking as the catalog's `q`, so the dropdown and the
+     * full results page always agree. Only purchasable products; no count query.
+     *
+     * @return Collection<int, Product>
+     */
+    public function suggest(string $rawQuery, int $limit): Collection
+    {
+        $q = $this->search->normalize($rawQuery);
+        if (mb_strlen($q) < 2) {
+            return new Collection;
         }
 
-        // The `<%` operator reads its threshold from a GUC. Setting it with is_local = true scopes it
-        // to this transaction, so it never leaks to other requests sharing a pooled connection (Neon).
-        return DB::transaction(function () use ($query, $perPage, $page) {
+        $query = Product::query()->select('products.*')->with(['platform', 'region'])->where('products.offers_count', '>', 0);
+        $this->search->apply($query, $q);
+        $this->search->orderByRelevance($query, $q);
+
+        return $this->withSearchThreshold($q, fn () => $query->limit($limit)->get());
+    }
+
+    /**
+     * The `<%` operator reads its threshold from a GUC. Setting it with is_local = true scopes it
+     * to this transaction, so it never leaks to other requests sharing a pooled connection (Neon).
+     */
+    private function withSearchThreshold(string $q, callable $run): mixed
+    {
+        if ($q === '' || ! $this->search->usesFuzzy($q)) {
+            return $run();
+        }
+
+        return DB::transaction(function () use ($run) {
             DB::select("SELECT set_config('pg_trgm.word_similarity_threshold', ?, true)", [
                 (string) config('search.word_similarity_threshold'),
             ]);
 
-            return $query->paginate($perPage, ['*'], 'page', $page);
+            return $run();
         });
     }
 
