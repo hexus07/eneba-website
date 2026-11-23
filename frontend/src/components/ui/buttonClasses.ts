@@ -5,17 +5,18 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const base =
   'inline-flex items-center justify-center gap-8 rounded-none text-button whitespace-nowrap select-none ' +
-  'transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50';
+  'transition-colors duration-150 disabled:cursor-not-allowed';
 
 const variants: Record<ButtonVariant, string> = {
   // Yellow CTA ("Buy now", "Proceed to checkout")
-  primary: 'bg-accent text-fg-on-accent hover:bg-accent/90 active:bg-accent/80',
+  // Disabled: neutral fill, not faded yellow (opacity on yellow over purple reads as olive).
+  primary: 'bg-accent text-fg-on-accent hover:bg-accent/90 active:bg-accent/80 disabled:bg-fg-primary/15 disabled:text-fg-disabled',
   // Bordered, full-width-ish section actions ("See all", "Load more", "Log in with password")
-  outline: 'border border-line-default text-fg-primary hover:bg-fg-primary/10',
+  outline: 'border border-line-default text-fg-primary hover:bg-fg-primary/10 disabled:opacity-50',
   // Compact inline action in rows ("Buy now" on offer rows)
-  secondary: 'border border-line-default text-fg-primary hover:bg-fg-primary hover:text-fg-on-accent',
+  secondary: 'border border-line-default text-fg-primary hover:bg-fg-primary hover:text-fg-on-accent disabled:opacity-50',
   // Square, icon-only ("add to cart" next to Buy now)
-  icon: 'border border-line-default text-fg-primary hover:bg-fg-primary/10 aspect-square',
+  icon: 'border border-line-default text-fg-primary hover:bg-fg-primary/10 aspect-square disabled:opacity-50',
 };
 
 const sizes: Record<ButtonSize, string> = {
