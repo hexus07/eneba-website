@@ -16,4 +16,5 @@ export { Select } from './Select';
 export { Skeleton, SkeletonText } from './Skeleton';
 export { Spinner } from './Spinner';
 export { TextInput } from './TextInput';
+export { Toaster } from './Toaster';
 export * from './icons';

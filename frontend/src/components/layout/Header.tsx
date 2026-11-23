@@ -3,6 +3,7 @@ import { selectIsAuthenticated, useAuthStore } from '@/features/auth/authStore';
 import { selectGuestCartCount, useGuestCartStore } from '@/features/cart/guestCartStore';
 import { CartIcon, MenuIcon, UserIcon } from '@/components/ui';
 import { SearchBox } from '@/features/search/SearchBox';
+import { CheckoutStepper } from './CheckoutStepper';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { Wordmark } from './Wordmark';
 
@@ -55,7 +56,37 @@ function AccountLinks() {
   );
 }
 
-export function Header() {
+export type HeaderVariant = 'full' | 'checkout' | 'minimal';
+
+/**
+ * full: store pages. checkout: wordmark + progress stepper + locale (cart/checkout, as on eneba.com,
+ * no distractions). minimal: wordmark only (login/register).
+ */
+export function Header({ variant = 'full', checkoutStep = 1 }: { variant?: HeaderVariant; checkoutStep?: 1 | 2 | 3 }) {
+  if (variant === 'minimal') {
+    return (
+      <header className="mx-auto flex h-header w-full max-w-content items-center px-15 xl:px-0">
+        <Wordmark />
+      </header>
+    );
+  }
+  if (variant === 'checkout') {
+    return (
+      <header className="bg-canvas-header">
+        <div className="mx-auto flex h-header max-w-content items-center gap-30 px-15 xl:px-0">
+          <Wordmark className="shrink-0" />
+          <CheckoutStepper current={checkoutStep} />
+          <div className="hidden lg:block">
+            <LocaleSwitcher />
+          </div>
+        </div>
+      </header>
+    );
+  }
+  return <FullHeader />;
+}
+
+function FullHeader() {
   // On /store the box shows the current search, so the text and the URL never disagree. Keyed by it,
   // the box resets when the URL's q changes (Back, "did you mean", Clear) but not while typing.
   const location = useLocation();

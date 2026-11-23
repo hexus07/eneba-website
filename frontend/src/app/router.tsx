@@ -18,14 +18,14 @@ export const routes = [
     ],
   },
   {
-    element: <AppLayout footer="checkout" />,
+    element: <AppLayout header="checkout" footer="checkout" />,
     children: [
       { path: 'cart', element: <PlaceholderPage title="My cart" milestone="M6" /> },
       { path: 'checkout', element: <PlaceholderPage title="Checkout" milestone="M7" /> },
     ],
   },
   {
-    element: <AppLayout footer="auth" />,
+    element: <AppLayout header="minimal" footer="auth" />,
     children: [
       { path: 'login', element: <PlaceholderPage title="Log in" milestone="M6" /> },
       { path: 'register', element: <PlaceholderPage title="Register" milestone="M6" /> },

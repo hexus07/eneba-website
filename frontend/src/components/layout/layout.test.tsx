@@ -88,6 +88,19 @@ describe('AppLayout footer variants by route', () => {
     expect(container.querySelectorAll('footer img')).toHaveLength(0);
   });
 
+  it('checkout pages use the stepper header; auth pages a wordmark-only header', () => {
+    const checkout = renderApp('/cart');
+    expect(screen.getByRole('list', { name: 'Checkout progress' })).toBeInTheDocument();
+    expect(screen.getByText('Cart').closest('li')).toHaveAttribute('aria-current', 'step');
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
+    checkout.unmount();
+
+    renderApp('/login');
+    expect(screen.getByRole('link', { name: /gamekeys home/i })).toBeInTheDocument();
+    expect(screen.queryAllByRole('combobox')).toHaveLength(0);
+    expect(screen.queryByRole('link', { name: /cart/i })).not.toBeInTheDocument();
+  });
+
   it('has a skip link to the main content', () => {
     renderApp('/');
     expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#content');
