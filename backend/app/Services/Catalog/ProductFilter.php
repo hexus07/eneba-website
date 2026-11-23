@@ -16,11 +16,13 @@ class ProductFilter
 {
     public const SORTS = ['relevance', 'popular', 'price_asc', 'price_desc', 'newest'];
 
+    public const TYPES = ['game', 'dlc', 'gift_card', 'subscription', 'software'];
+
     public function __construct(private readonly ProductSearch $search) {}
 
     /**
      * @param array{
-     *   q?: ?string, platform?: list<string>, region?: list<string>,
+     *   q?: ?string, platform?: list<string>, region?: list<string>, genre?: list<string>, type?: list<string>,
      *   price_min?: ?int, price_max?: ?int, sort?: ?string, per_page?: ?int, page?: ?int
      * } $params
      */
@@ -99,6 +101,15 @@ class ProductFilter
 
         if (! empty($params['region'])) {
             $query->whereHas('region', fn (Builder $r) => $r->whereIn('slug', $params['region']));
+        }
+
+        // Within one dimension values are OR'd (rpg OR indie); dimensions are AND'd.
+        if (! empty($params['genre'])) {
+            $query->whereHas('genres', fn (Builder $g) => $g->whereIn('slug', $params['genre']));
+        }
+
+        if (! empty($params['type'])) {
+            $query->whereIn('products.type', $params['type']);
         }
 
         if (isset($params['price_min'])) {

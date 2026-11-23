@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Genre;
 use App\Models\Platform;
 use App\Models\Product;
 use App\Models\Region;
@@ -187,6 +188,40 @@ class ProductIndexTest extends TestCase
         $this->assertSame(['Steam Europe'], $this->titles('platform=steam&region=europe'));
     }
 
+    public function test_filters_by_genre_any_of_the_given_slugs(): void
+    {
+        $rpg = Genre::factory()->create(['slug' => 'rpg']);
+        $indie = Genre::factory()->create(['slug' => 'indie']);
+        $this->product('RPG Only')->genres()->attach($rpg);
+        $this->product('Indie Only')->genres()->attach($indie);
+        $this->product('Both')->genres()->attach([$rpg->id, $indie->id]);
+        $this->product('Neither');
+
+        $this->assertEqualsCanonicalizing(['RPG Only', 'Both'], $this->titles('genre[]=rpg'));
+        $this->assertEqualsCanonicalizing(['RPG Only', 'Indie Only', 'Both'], $this->titles('genre=rpg,indie'));
+        $this->assertSame(['Both'], array_values(array_unique($this->titles('genre=rpg,indie&q=both'))), 'no duplicate rows from the join');
+    }
+
+    public function test_filters_by_type_and_combines_dimensions(): void
+    {
+        $this->product('Game Steam', ['type' => 'game']);
+        $this->product('DLC Steam', ['type' => 'dlc']);
+        $this->product('Card PSN', ['type' => 'gift_card', 'platform_id' => $this->psn->id]);
+
+        $this->assertSame(['DLC Steam'], $this->titles('type=dlc'));
+        $this->assertEqualsCanonicalizing(['Game Steam', 'DLC Steam'], $this->titles('type[]=game&type[]=dlc'));
+        $this->assertSame([], $this->titles('type=gift_card&platform=steam'), 'dimensions are AND-ed');
+    }
+
+    public function test_genre_filter_does_not_duplicate_products_in_pagination(): void
+    {
+        $genres = Genre::factory()->count(3)->create();
+        $this->product('Multi')->genres()->attach($genres->pluck('id'));
+
+        $this->getJson('/api/v1/products?genre='.$genres->pluck('slug')->implode(','))
+            ->assertJsonPath('meta.total', 1)->assertJsonCount(1, 'data');
+    }
+
     public function test_filters_by_price_range_in_cents_inclusive(): void
     {
         $this->product('Cheap', ['min_price_cents' => 499]);
@@ -275,6 +310,7 @@ class ProductIndexTest extends TestCase
             'max below min' => ['price_min=2000&price_max=1000', 'price_max'],
             'per_page too big' => ['per_page=500', 'per_page'],
             'q too long' => ['q='.str_repeat('a', 101), 'q'],
+            'unknown type' => ['type=dlc,console', 'type.1'],
         ];
     }
 }

@@ -13,10 +13,10 @@ class ProductIndexRequest extends FormRequest
         return true;
     }
 
-    /** Accept both `platform[]=steam&platform[]=psn` and `platform=steam,psn`. */
+    /** Accept both `platform[]=steam&platform[]=psn` and `platform=steam,psn` (same for region, genre, type). */
     protected function prepareForValidation(): void
     {
-        foreach (['platform', 'region'] as $key) {
+        foreach (['platform', 'region', 'genre', 'type'] as $key) {
             $value = $this->input($key);
             if (is_string($value)) {
                 $this->merge([$key => array_values(array_filter(array_map('trim', explode(',', $value))))]);
@@ -32,6 +32,10 @@ class ProductIndexRequest extends FormRequest
             'platform.*' => ['string', 'max:64'],
             'region' => ['nullable', 'array', 'max:20'],
             'region.*' => ['string', 'max:64'],
+            'genre' => ['nullable', 'array', 'max:20'],
+            'genre.*' => ['string', 'max:64'],
+            'type' => ['nullable', 'array', 'max:5'],
+            'type.*' => ['string', Rule::in(ProductFilter::TYPES)],
             'price_min' => ['nullable', 'integer', 'min:0'],
             'price_max' => ['nullable', 'integer', 'min:0', ...($this->filled('price_min') ? ['gte:price_min'] : [])],
             'sort' => ['nullable', Rule::in(ProductFilter::SORTS)],
