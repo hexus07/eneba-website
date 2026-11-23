@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { cn } from '@/lib/cn';
-import { coverCandidates } from '@/lib/covers';
 import { Badge } from './Badge';
+import { CoverImage } from './CoverImage';
 import { PriceTag } from './PriceTag';
 import { Skeleton, SkeletonText } from './Skeleton';
 import { CartIcon } from './icons';
@@ -41,7 +40,15 @@ export function ProductCard({
     >
       <div className="relative aspect-cover overflow-hidden bg-surface-raised">
         {/* key: a new coverUrl starts the fallback chain again */}
-        <Cover key={coverUrl ?? ''} coverUrl={coverUrl} title={title} />
+        <CoverImage
+          key={coverUrl ?? ''}
+          url={coverUrl}
+          fallback={
+            <div className="flex size-full items-center justify-center p-15 text-center text-h2-sm text-fg-tertiary" aria-hidden="true">
+              {title}
+            </div>
+          }
+        />
         {cashbackPercent ? <Badge variant="cashback" className="absolute bottom-platform-bar left-0" /> : null}
         <div className="absolute inset-x-0 bottom-0 flex h-platform-bar items-center justify-center bg-overlay-scrim px-10 text-label text-fg-primary backdrop-blur-scrim">
           <span className="truncate">{platformName}</span>
@@ -81,31 +88,6 @@ export function ProductCard({
         </button>
       )}
     </article>
-  );
-}
-
-/** Tries each candidate (portrait → landscape header) on error, then a text placeholder. */
-function Cover({ coverUrl, title }: { coverUrl: string | null; title: string }) {
-  const candidates = coverCandidates(coverUrl);
-  const [attempt, setAttempt] = useState(0);
-  const src = candidates[attempt];
-
-  if (!src) {
-    return (
-      <div className="flex size-full items-center justify-center p-15 text-center text-h2-sm text-fg-tertiary" aria-hidden="true">
-        {title}
-      </div>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      onError={() => setAttempt((a) => a + 1)}
-      className="size-full object-cover"
-    />
   );
 }
 

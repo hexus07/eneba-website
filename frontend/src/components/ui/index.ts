@@ -2,6 +2,7 @@ export { Badge, type BadgeVariant } from './Badge';
 export { Button, type ButtonProps } from './Button';
 export { buttonClasses, type ButtonSize, type ButtonVariant } from './buttonClasses';
 export { Checkbox } from './Checkbox';
+export { CoverImage } from './CoverImage';
 export { Chip } from './Chip';
 export { Drawer } from './Drawer';
 export { Pagination } from './Pagination';
