@@ -81,24 +81,12 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 - Price filtering and sorting use the denormalized `products.min_price_cents`, which an `Offer` observer recomputes along with `offers_count`.
 - On the frontend, filter state lives in the URL query string as the single source of truth. That makes results shareable and keeps back/forward working.
 
-### Checkout & keys (implemented)
-1. **Cart**: server-side for signed-in users (`cart_items`). Guests keep a localStorage cart, merged with `POST /cart/merge` on login (best effort: unavailable lines dropped, quantities clamped to stock). Prices are live. Adding checks stock and caps each line at 10 keys.
-2. **`POST /checkout`** (optional `Idempotency-Key` header, replays return the same order and payment):
-   - re-prices from current offers (client totals ignored) and checks stock. Any shortfall or inactive offer returns **409** `{items:[{offer_id, reason, requested, available}]}` and creates no order.
-   - creates a `pending` order with item snapshots (title, platform, region, seller, unit price). **No keys are touched yet.**
-   - asks the gateway for a payment and returns `{data: order, payment}`.
-3. **Payment**:
-   - **Stripe**: a PaymentIntent created with Stripe idempotency key `order-{id}`. The SPA confirms it with Elements using `client_secret`. The signed webhook `payment_intent.succeeded` fulfills the order, but only if `amount_received` and currency match the order. `payment_failed` keeps the order pending (Elements can retry), and `canceled` fails it.
-   - **Fake**: `POST /payments/fake/{order}/confirm {outcome: succeed|fail}`.
-   - Both go through `OrderFulfiller`.
-4. **Key assignment on success** (`OrderFulfiller::markPaid`), in one transaction:
-   - lock the order row. If it isn't `pending`, stop (duplicate webhooks and double confirms are no-ops).
-   - for each item, `SELECT … FOR UPDATE SKIP LOCKED LIMIT qty` on available keys, then `UPDATE … WHERE status='available'` with an affected-row check.
-   - mark the order `completed` and remove the purchased lines from the cart.
-   - *after commit*, deactivate offers that sold out, through Eloquent so product stats update. (Inside the transaction, concurrent buyers of the last keys can't see each other's sales.)
-5. **Oversell** (stock ran out between checkout and payment): the whole assignment rolls back, all or nothing. The order is claimed `pending → refunding` under the row lock *before* the provider call, so a retry can't fulfill an order being refunded. Then the gateway refund runs (Stripe idempotency key `refund-{id}`) and the order becomes `refunded`. If the refund call fails, the webhook returns 5xx, Stripe redelivers, and the refund resumes.
-6. **Order history** (`GET /orders`, `GET /orders/{id}`) returns plaintext keys for the owner's `completed` orders, with `Cache-Control: no-store`. Other users' orders return 404.
-7. No reservations, so nothing expires: an abandoned `pending` order holds no stock.
+### Checkout & keys (implemented, M7: reservation model)
+1. **Cart**: server-side for signed-in users, guest cart in localStorage (priced via `POST /cart/preview`, merged on login).
+2. **`POST /checkout`** (optional `Idempotency-Key`): first runs the expiry sweep inline, then in one transaction creates a `pending` order (prices snapshotted from offers) and **reserves** its keys with `SELECT … FOR UPDATE SKIP LOCKED` + a status-guarded UPDATE (`KeyReservations::reserve`). Any shortage rolls everything back → 409 with current stock, no order. `expires_at = now + 15 min`.
+3. **Payment**: fake `POST /checkout/{order}/confirm {outcome}` (409 if the reservation expired) or the signed, idempotent Stripe webhook. Success sells exactly that order's reserved keys; decline/cancel releases them at once.
+4. **Expiry**: `orders:expire-reservations` (scheduled every minute) marks unpaid orders `expired` and releases their keys; checkout runs the same sweep inline for hosts without a scheduler. A Stripe payment arriving after expiry is refunded (claimed as `refunding` before the provider call).
+5. **Orders**: `GET /orders`, `GET /orders/{id}` with plaintext keys for the owner's completed orders only (others get 404), `no-store`.
 
 ### Auth
 - Sanctum personal access tokens sent as `Authorization: Bearer`. The frontend and API are on different domains, so tokens avoid cross-site cookie and CSRF problems.
@@ -140,7 +128,7 @@ offers(
 product_keys(
   id, offer_id FK (RESTRICT: sold keys outlive offers), code TEXT (encrypted cast),
   code_hash CHAR(64) UNIQUE,   -- HMAC-SHA256(APP_KEY, normalized code): ciphertext is random, so this enforces uniqueness
-  status ENUM(available, reserved, sold),   -- `reserved` unused for now (keys are assigned on payment success)
+  status ENUM(available, reserved, sold),   -- reserved at checkout until the order's expires_at
   reserved_until TIMESTAMP NULL, order_item_id FK → order_items NULL, revealed_at NULL,
   created_at
 )
@@ -219,7 +207,7 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 |---|---|---|
 | POST | `/checkout` | optional header `Idempotency-Key`. → 201 `{ data: order, payment: {provider, client_secret, publishable_key} \| {provider, confirm_url} }` (200 on replay). 409 out of stock / unavailable, 422 empty cart, 502 provider down |
 | POST | `/payments/stripe/webhook` | **no auth**, Stripe signature verified. Handles `payment_intent.succeeded / payment_failed / canceled` |
-| POST | `/payments/fake/{order}/confirm` | `{ outcome: succeed \| fail }`. 404 unless `PAYMENT_DRIVER=fake` |
+| POST | `/checkout/{order}/confirm` | `{ outcome: succeed \| fail }`. 404 unless `PAYMENT_DRIVER=fake` |
 | GET | `/orders` | paginated history (10/page), newest first, **plaintext keys** for completed orders, `no-store` |
 | GET | `/orders/{id}` | same shape for one order. Another user's order returns 404 |
 
@@ -310,7 +298,7 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
 | Auth transport | Bearer tokens | Sanctum cookies via Vercel proxy | Simple cross-domain setup. Cost: token in localStorage (XSS exposure) |
 | Payments | Stripe test + Fake gateway behind one interface | Fake only | Real webhook/idempotency flow. Fake keeps local dev and tests offline |
 | Background jobs | Sync fulfillment in the webhook request | Queue worker | Render free tier has no worker. Fine at demo scale |
-| When keys are taken | Assigned on payment success (`SKIP LOCKED`), auto-refund on oversell | Reserve at checkout with expiry | No reservation expiry or cleanup job, and abandoned checkouts hold no stock. Cost: in a race for the last keys, a buyer can pay and then be refunded instead of being told "sold out" before paying (checkout's stock check makes this rare) |
+| When keys are taken | Reserved at checkout (`SKIP LOCKED`), 15-min expiry (scheduled + inline sweep), sold on payment | Assign on payment success | Nobody pays for a key that is gone. Cost: abandoned checkouts hold stock for up to 15 min; late payments are refunded |
 | Keys in history | Returned in order responses (`no-store`) | Masked + reveal endpoint | Simpler UX and API. Cost: keys travel on every history load. `revealed_at` is kept for a future reveal flow |
 | Filter state | URL query string | Client store | Shareable links, back button works |
 
@@ -325,7 +313,7 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
 5. **M4 Homepage:** ✅ Backend: 6 block types (hero_banner, best_sellers, deals, new_releases, by_platform, platform_tiles), gradient/text banners, one card per title, seeded layout of 7 blocks. Frontend: registry-driven HomePage, per-block skeleton/error isolation with retry, ScrollRow carousels, deals add to the guest cart. Gaps: no per-block caching; deals add to the *guest* cart even when signed in (server cart wiring is M6 frontend); no category-shortcut icons (Eneba's icon row needs artwork).
 6. **M5 Product page:** 🟡 backend ✅ (`/products/{slug}` with offers + variants). Missing: the page. Planned: details and offers list, add to cart.
 7. **M6 Auth + Cart:** ✅ Backend (earlier) + `GET /me` alias + public `POST /cart/preview` (guest cart priced live, same shape as `GET /cart`). Frontend: login/register (login.png/register.png; email + password only), guest-cart merge on login (kept on failure), `?redirect=` with open-redirect guard, `RequireAuth` on /checkout and /orders, logout revoking the token; cart page (checkout.png) for guests and users with stock/region warnings; header count, toasts. Gaps: no password reset or email verification; no social / magic-link login; the 7-day token simply expires (no refresh).
-8. **M7 Checkout:** ✅ backend (Stripe Elements / fake-payment UI not started; Stripe never exercised against the real test API) CheckoutService, OrderFulfiller, Fake + Stripe gateway, webhook, orders with keys.
+8. **M7 Checkout:** ✅ Reservation model (backend), checkout → payment (countdown) → keys (reveal + copy), order history. Gaps: Stripe Elements card form not wired (fake gateway only in the UI); Stripe never run against the real test API.
 9. **M8 Polish & deploy:** ⬜ not started. responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
 
 ## 10. Open issues

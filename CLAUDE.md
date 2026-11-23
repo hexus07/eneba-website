@@ -28,7 +28,7 @@ Run the relevant tests, typecheck and lint before calling a task done.
 - Never trust client prices. Re-price from `offers` at checkout.
 - Wrap multi-step writes in `DB::transaction`. Lock keys with `lockForUpdate()->skipLocked()`.
 - Webhooks must be idempotent (`payment_events.provider_event_id` unique) and signature-verified.
-- Key assignment lives only in `OrderFulfiller` (lock order row → `FOR UPDATE SKIP LOCKED` keys → status-guarded UPDATE). Never call a payment provider while holding row locks.
+- `product_keys.status` changes only in `Services/Checkout/KeyReservations` (reserve at checkout with `lock('FOR UPDATE SKIP LOCKED')`: Laravel has no `skipLocked()`; sell / release / expire). Never call a payment provider while holding row locks.
 - Order/cart lookups are scoped through `$request->user()->orders()` / `cartItems()`, so another user's id returns 404. UUID route params use `whereUuid`.
 - Tests that need committed data (multiple connections/processes) use `Tests\Concerns\CommitsToDatabase`, not bare `DatabaseTruncation`, which leaks rows into later tests.
 - Product key codes use the `encrypted` cast. Never log them or include them in list endpoints.
