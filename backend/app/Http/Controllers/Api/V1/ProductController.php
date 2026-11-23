@@ -16,9 +16,12 @@ class ProductController extends Controller
 {
     public function index(ProductIndexRequest $request, ProductFilter $filter): AnonymousResourceCollection
     {
-        $products = $filter->paginate($request->filters())->withQueryString();
+        $result = $filter->search($request->filters());
 
-        return ProductCardResource::collection($products);
+        return ProductCardResource::collection($result->products->withQueryString())->additional(['meta' => [
+            'facets' => $result->facets,
+            'price_range' => $result->priceRange,
+        ]]);
     }
 
     public function show(string $slug, Stock $stock): ProductDetailResource

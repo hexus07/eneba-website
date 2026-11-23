@@ -8,6 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Catalog listing: filters + search + sort + pagination for GET /api/v1/products.
@@ -20,13 +21,18 @@ class ProductFilter
 
     public function __construct(private readonly ProductSearch $search) {}
 
+    /** Facet dimensions: request param => [table, product FK or pivot]. */
+    public const FACETS = ['platform', 'region', 'genre'];
+
     /**
+     * Results page + facet counts + price range for the same query, in one search-threshold scope.
+     *
      * @param array{
      *   q?: ?string, platform?: list<string>, region?: list<string>, genre?: list<string>, type?: list<string>,
      *   price_min?: ?int, price_max?: ?int, sort?: ?string, per_page?: ?int, page?: ?int
      * } $params
      */
-    public function paginate(array $params): LengthAwarePaginator
+    public function search(array $params): CatalogResult
     {
         $rawQ = trim((string) ($params['q'] ?? ''));
         $q = $this->search->normalize($rawQ);
@@ -35,9 +41,36 @@ class ProductFilter
             $sort = 'popular';
         }
 
-        $query = Product::query()->select('products.*')->with(['platform', 'region']);
+        $perPage = (int) ($params['per_page'] ?? 24);
+        $page = (int) ($params['page'] ?? 1);
 
-        $this->applyFilters($query, $params);
+        return $this->withSearchThreshold($q, function () use ($params, $rawQ, $q, $sort, $perPage, $page) {
+            $query = $this->filtered($params, $rawQ, $q)->select('products.*')->with(['platform', 'region']);
+            $this->applySort($query, $sort, $q);
+
+            return new CatalogResult(
+                products: $query->paginate($perPage, ['*'], 'page', $page),
+                facets: array_combine(self::FACETS, array_map(fn ($d) => $this->facet($d, $params, $rawQ, $q), self::FACETS)),
+                priceRange: $this->priceRange($params, $rawQ, $q),
+            );
+        });
+    }
+
+    /** Back-compat wrapper: just the page of products. */
+    public function paginate(array $params): LengthAwarePaginator
+    {
+        return $this->search($params)->products;
+    }
+
+    /**
+     * Products matching the search and every filter, except the `$except` dimension. Facets use
+     * that to count each dimension against the other filters only ("disjunctive" faceting): with
+     * Steam selected, PSN still shows how many results ticking it would add, not 0.
+     */
+    private function filtered(array $params, string $rawQ, string $q, ?string $except = null): Builder
+    {
+        $query = Product::query();
+        $this->applyFilters($query, $except === null ? $params : [...$params, $except => null]);
 
         if ($q !== '') {
             $this->search->apply($query, $q);
@@ -46,12 +79,49 @@ class ProductFilter
             $query->whereRaw('false');
         }
 
-        $this->applySort($query, $sort, $q);
+        return $query;
+    }
 
-        $perPage = (int) ($params['per_page'] ?? 24);
-        $page = (int) ($params['page'] ?? 1);
+    /** @return list<array{slug: string, name: string, count: int, selected: bool}> */
+    private function facet(string $dimension, array $params, string $rawQ, string $q): array
+    {
+        $ids = $this->filtered($params, $rawQ, $q, $dimension)->select('products.id');
+        $table = Str::plural($dimension);
 
-        return $this->withSearchThreshold($q, fn () => $query->paginate($perPage, ['*'], 'page', $page));
+        $rows = DB::table($table)
+            ->when(
+                $dimension === 'genre',
+                fn ($b) => $b->join('genre_product', 'genre_product.genre_id', '=', 'genres.id')->whereIn('genre_product.product_id', $ids),
+                fn ($b) => $b->join('products', "products.{$dimension}_id", '=', "{$table}.id")->whereIn('products.id', $ids),
+            )
+            ->groupBy("{$table}.id", "{$table}.slug", "{$table}.name")
+            ->selectRaw("{$table}.slug, {$table}.name, COUNT(*) AS count")
+            ->get();
+
+        $selected = $params[$dimension] ?? [];
+
+        // Keep selected options listed even at 0, so they can be unticked.
+        $missing = array_diff($selected, $rows->pluck('slug')->all());
+        if ($missing !== []) {
+            $rows = $rows->concat(DB::table($table)->whereIn('slug', $missing)->get(['slug', 'name'])->map(fn ($r) => (object) [...(array) $r, 'count' => 0]));
+        }
+
+        return $rows
+            ->map(fn ($r) => ['slug' => $r->slug, 'name' => $r->name, 'count' => (int) $r->count, 'selected' => in_array($r->slug, $selected, true)])
+            ->sortBy([['count', 'desc'], ['name', 'asc']])
+            ->values()
+            ->all();
+    }
+
+    /** @return array{min: ?int, max: ?int} Price span of the current results, ignoring the price filter itself. */
+    private function priceRange(array $params, string $rawQ, string $q): array
+    {
+        $row = $this->filtered([...$params, 'price_min' => null, 'price_max' => null], $rawQ, $q)
+            ->toBase()
+            ->selectRaw('MIN(products.min_price_cents) AS min, MAX(products.min_price_cents) AS max')
+            ->first();
+
+        return ['min' => $row?->min === null ? null : (int) $row->min, 'max' => $row?->max === null ? null : (int) $row->max];
     }
 
     /**
