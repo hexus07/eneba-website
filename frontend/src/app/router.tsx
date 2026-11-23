@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { StorePage } from '@/features/catalog/StorePage';
 import { UiShowcasePage } from '@/pages/dev/UiShowcasePage';
 import { NotFoundPage, PlaceholderPage } from '@/pages/PlaceholderPage';
 
@@ -8,7 +9,7 @@ export const routes = [
     element: <AppLayout footer="full" />,
     children: [
       { index: true, element: <PlaceholderPage title="Home" milestone="M4" /> },
-      { path: 'store', element: <PlaceholderPage title="Store" milestone="M3" /> },
+      { path: 'store', element: <StorePage /> },
       { path: 'product/:slug', element: <PlaceholderPage title="Product" milestone="M5" /> },
       { path: 'orders', element: <PlaceholderPage title="My orders" milestone="M7" /> },
       { path: 'dev/ui', element: <UiShowcasePage /> },

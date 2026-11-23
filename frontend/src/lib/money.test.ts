@@ -1,4 +1,4 @@
-import { discountPercent, formatMoney } from './money';
+import { discountPercent, eurosToCents, formatMoney } from './money';
 
 describe('formatMoney', () => {
   it('formats integer cents in EUR by default', () => {
@@ -28,5 +28,18 @@ describe('discountPercent', () => {
     expect(discountPercent(1000, undefined)).toBeNull();
     expect(discountPercent(1000, 1000)).toBeNull();
     expect(discountPercent(1000, 900)).toBeNull();
+  });
+});
+
+describe('eurosToCents', () => {
+  it('parses dot or comma decimals and rounds to whole cents', () => {
+    expect(eurosToCents('12.5')).toBe(1250);
+    expect(eurosToCents(' 12,50 ')).toBe(1250);
+    expect(eurosToCents('0.105')).toBe(11); // float noise rounded, not truncated
+    expect(eurosToCents('0')).toBe(0);
+  });
+
+  it('returns null for empty, negative or non-numeric input', () => {
+    for (const v of ['', '  ', '-1', 'abc', '1e', 'Infinity']) expect(eurosToCents(v)).toBeNull();
   });
 });

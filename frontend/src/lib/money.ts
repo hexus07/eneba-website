@@ -29,3 +29,9 @@ export function discountPercent(priceCents: number, originalCents: number | null
   if (!originalCents || originalCents <= priceCents) return null;
   return Math.round((100 * (originalCents - priceCents)) / originalCents);
 }
+
+/** User-typed euros → integer cents: "12.5" or "12,50" → 1250. Empty, negative or invalid → null. */
+export function eurosToCents(value: string): number | null {
+  const n = Number(value.trim().replace(',', '.'));
+  return value.trim() === '' || !Number.isFinite(n) || n < 0 ? null : Math.round(n * 100);
+}

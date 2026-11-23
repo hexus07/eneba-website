@@ -8,9 +8,11 @@ export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   error?: string | undefined;
   hint?: string;
   size?: 'md' | 'lg';
+  /** Background: `header` (default, on canvas/panels) or `raised` (on the lighter store sidebar). */
+  tone?: 'header' | 'raised';
 }
 
-export function TextInput({ label, hideLabel = false, error, hint, size = 'md', required, id, className, ...props }: TextInputProps) {
+export function TextInput({ label, hideLabel = false, error, hint, size = 'md', tone = 'header', required, id, className, ...props }: TextInputProps) {
   const autoId = useId();
   const inputId = id ?? autoId;
   const describedBy = [error && `${inputId}-error`, hint && `${inputId}-hint`].filter(Boolean).join(' ') || undefined;
@@ -27,7 +29,8 @@ export function TextInput({ label, hideLabel = false, error, hint, size = 'md', 
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn(
-          'w-full rounded-none bg-canvas-header px-20 text-body text-fg-primary placeholder:text-fg-tertiary',
+          'w-full rounded-none px-20 text-body text-fg-primary placeholder:text-fg-tertiary',
+          tone === 'raised' ? 'bg-surface-raised' : 'bg-canvas-header',
           'border border-transparent outline-none focus:border-accent',
           size === 'lg' ? 'h-control-lg' : 'h-control',
           error && 'border-fg-region',
