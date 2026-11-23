@@ -143,6 +143,36 @@ class HomeBlockProvidersTest extends TestCase
         $this->assertCount(3, $this->block('new_releases', ['limit' => 3]));
     }
 
+    // ---- one card per title --------------------------------------------------------------
+
+    public function test_product_blocks_show_one_variant_per_title_the_best_ranked_one(): void
+    {
+        $platform = Platform::factory()->create(['slug' => 'steam']);
+        foreach ([['Satisfactory', 900, '2024-09-10'], ['Satisfactory', 500, '2024-09-10'], ['Satisfactory', 300, '2024-09-10'], ['Hades', 400, '2020-09-17']] as [$title, $sales, $date]) {
+            $this->inStock($title, ['platform_id' => $platform->id, 'sales_count' => $sales, 'release_date' => $date]);
+        }
+
+        foreach (['best_sellers' => [], 'new_releases' => [], 'by_platform' => ['platform' => 'steam']] as $type => $config) {
+            HomeBlock::query()->delete();
+            $items = $this->block($type, $config + ['limit' => 5]);
+            $this->assertSame(['Satisfactory', 'Hades'], array_column($items, 'title'), $type);
+            $this->assertSame(Product::query()->where('sales_count', 900)->value('id'), $items[0]['id'], "$type keeps the best-ranked variant");
+        }
+    }
+
+    public function test_deals_show_one_offer_per_title(): void
+    {
+        foreach ([[1000, 5000], [2500, 5000]] as [$price, $original]) {
+            $p = Product::factory()->withoutOffers()->titled('Elden Ring')->create();
+            Offer::factory()->create(['product_id' => $p->id, 'price_cents' => $price, 'original_price_cents' => $original]);
+        }
+
+        $items = $this->block('deals', ['min_discount_percent' => 20]);
+
+        $this->assertCount(1, $items);
+        $this->assertSame(80, $items[0]['deal']['discount_percent'], 'the bigger discount wins');
+    }
+
     // ---- by_platform ---------------------------------------------------------------------
 
     public function test_by_platform_lists_in_stock_products_of_the_configured_platform_by_popularity(): void

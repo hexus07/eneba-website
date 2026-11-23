@@ -6,6 +6,7 @@ use App\Http\Resources\ProductCardResource;
 use App\Models\HomeBlock;
 use App\Models\Offer;
 use App\Services\Home\BlockProvider;
+use App\Services\Home\OnePerTitle;
 
 /**
  * Source: `offers` — active listings with the largest discount vs their "was" price.
@@ -30,9 +31,10 @@ class DealsBlockProvider implements BlockProvider
         $offers = Offer::query()->fromSub($best, 'offers')
             ->where('discount_percent', '>=', $minDiscount)
             ->orderByDesc('discount_percent')->orderBy('price_cents')->orderBy('id')
-            ->limit($limit)
+            ->limit($limit * OnePerTitle::OVERFETCH)
             ->with(['product.platform', 'product.region', 'seller'])
             ->get();
+        $offers = OnePerTitle::take($offers, $limit, fn (Offer $o) => $o->product->title);
 
         return ['items' => $offers->map(fn (Offer $o) => [
             ...(new ProductCardResource($o->product))->resolve(),
