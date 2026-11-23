@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
-use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\CommitsToDatabase;
 use Tests\TestCase;
 
 /**
@@ -13,7 +13,7 @@ use Tests\TestCase;
  */
 class SearchThresholdScopeTest extends TestCase
 {
-    use DatabaseTruncation;
+    use CommitsToDatabase;
 
     public function test_similarity_threshold_is_scoped_to_the_request_transaction(): void
     {
