@@ -21,6 +21,7 @@ class ProductController extends Controller
         return ProductCardResource::collection($result->products->withQueryString())->additional(['meta' => [
             'facets' => $result->facets,
             'price_range' => $result->priceRange,
+            'did_you_mean' => $result->didYouMean,
         ]]);
     }
 

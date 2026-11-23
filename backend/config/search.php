@@ -12,4 +12,11 @@ return [
     'min_fuzzy_length' => 3,
 
     'max_query_length' => 100,
+
+    /*
+     * "Did you mean" (zero-result searches only): best title by similarity() + word_similarity().
+     * Measured on the seed catalog: right answers score 0.63–0.67 ("eldn rng" → Elden Ring), the
+     * nearest wrong title 0.40 (Skyrim, outranked), noise like "zzqxv" 0.21. Below this: no suggestion.
+     */
+    'did_you_mean_min_score' => (float) env('SEARCH_DID_YOU_MEAN_MIN_SCORE', 0.3),
 ];

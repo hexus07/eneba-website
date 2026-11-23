@@ -55,6 +55,25 @@ class ProductSearch
             ->orderBy('products.id');
     }
 
+    /**
+     * Closest title to a query that found nothing, among the products in `$scope` (the other active
+     * filters), or null when nothing is close enough. Combining whole-string similarity with
+     * word_similarity ranks "eldn rng" → "Elden Ring" (0.67) above "The Elder Scrolls…" (0.40),
+     * which word_similarity alone ties at 0.33. Unindexed scan, but it only runs on zero results.
+     */
+    public function didYouMean(Builder $scope, string $normalized): ?string
+    {
+        $score = '(similarity(?, products.search_title) + word_similarity(?, products.search_title))';
+
+        return $scope
+            ->select('products.title')
+            ->whereRaw("{$score} >= ?", [$normalized, $normalized, config('search.did_you_mean_min_score')])
+            ->orderByRaw("{$score} DESC", [$normalized, $normalized])
+            ->orderByDesc('products.sales_count')
+            ->orderBy('products.id')
+            ->value('products.title');
+    }
+
     private function escapeLike(string $value): string
     {
         // The normalizer already strips % and _, but escape defensively in case it changes.

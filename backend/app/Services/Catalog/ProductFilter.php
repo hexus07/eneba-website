@@ -48,10 +48,16 @@ class ProductFilter
             $query = $this->filtered($params, $rawQ, $q)->select('products.*')->with(['platform', 'region']);
             $this->applySort($query, $sort, $q);
 
+            $products = $query->paginate($perPage, ['*'], 'page', $page);
+
             return new CatalogResult(
-                products: $query->paginate($perPage, ['*'], 'page', $page),
+                products: $products,
                 facets: array_combine(self::FACETS, array_map(fn ($d) => $this->facet($d, $params, $rawQ, $q), self::FACETS)),
                 priceRange: $this->priceRange($params, $rawQ, $q),
+                // Suggest within the other filters, so following the suggestion actually finds something.
+                didYouMean: $products->total() === 0 && $q !== ''
+                    ? $this->search->didYouMean($this->filtered([...$params, 'q' => null], '', ''), $q)
+                    : null,
             );
         });
     }
