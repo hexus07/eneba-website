@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Home\BlockRegistry;
 use App\Services\Payments\FakeGateway;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\StripeGateway;
@@ -16,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(BlockRegistry::class, fn ($app) => new BlockRegistry($app, config('home.providers')));
+
         // Resolved per use (not a singleton) so the driver follows config at runtime (tests switch it).
         $this->app->bind(PaymentGateway::class, fn () => match (config('payments.driver')) {
             'fake' => new FakeGateway,

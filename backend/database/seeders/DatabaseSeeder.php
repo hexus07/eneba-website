@@ -15,6 +15,6 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Demo User', 'password' => 'password'],
         );
 
-        $this->call(CatalogSeeder::class);
+        $this->call([CatalogSeeder::class, HomeSeeder::class]);
     }
 }

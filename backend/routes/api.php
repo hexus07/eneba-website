@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\FakePaymentController;
+use App\Http\Controllers\Api\V1\HomeController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\SearchController;
@@ -14,6 +15,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{slug}', [ProductController::class, 'show'])->where('slug', '[a-z0-9-]+');
     Route::get('/search/suggest', [SearchController::class, 'suggest']);
+
+    Route::get('/home', [HomeController::class, 'index']);
+    Route::get('/home/blocks/{key}', [HomeController::class, 'show'])->where('key', '[a-z0-9-]+');
 
     Route::middleware('throttle:auth')->group(function () {
         Route::post('/auth/register', [AuthController::class, 'register']);
