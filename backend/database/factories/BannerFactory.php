@@ -13,7 +13,8 @@ class BannerFactory extends Factory
         return [
             'title' => $this->faker->unique()->words(3, true),
             'subtitle' => $this->faker->sentence(),
-            'image_url' => 'https://example.test/banner.jpg',
+            'theme' => 'violet',
+            'image_url' => null,
             'cta_label' => 'Buy now',
             'cta_url' => '/store',
             'position' => 0,

@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Platform;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +45,7 @@ class HomeBlockProvidersTest extends TestCase
     public function test_hero_banner_returns_live_banners_in_order(): void
     {
         Banner::factory()->create(['title' => 'Second', 'position' => 2]);
-        Banner::factory()->create(['title' => 'First', 'position' => 1, 'cta_label' => 'Shop', 'cta_url' => '/store?platform=steam']);
+        Banner::factory()->create(['title' => 'First', 'position' => 1, 'cta_label' => 'Shop', 'cta_url' => '/store?platform=steam', 'theme' => 'violet']);
         Banner::factory()->create(['title' => 'Disabled', 'is_active' => false]);
         Banner::factory()->create(['title' => 'Not yet', 'starts_at' => now()->addDay()]);
         Banner::factory()->create(['title' => 'Expired', 'ends_at' => now()->subMinute()]);
@@ -54,6 +55,14 @@ class HomeBlockProvidersTest extends TestCase
 
         $this->assertSame(['First', 'Second', 'In window'], array_column($items, 'title'));
         $this->assertSame(['label' => 'Shop', 'url' => '/store?platform=steam'], $items[0]['cta']);
+        $this->assertSame('violet', $items[0]['theme']);
+        $this->assertNull($items[0]['image_url']);
+    }
+
+    public function test_banner_theme_is_constrained_in_the_database(): void
+    {
+        $this->expectException(QueryException::class);
+        Banner::factory()->create(['theme' => 'neon']);
     }
 
     // ---- best_sellers --------------------------------------------------------------------

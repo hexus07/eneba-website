@@ -10,7 +10,9 @@ class Banner extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'subtitle', 'image_url', 'cta_label', 'cta_url', 'position', 'starts_at', 'ends_at', 'is_active'];
+    public const THEMES = ['violet', 'gold', 'teal'];
+
+    protected $fillable = ['title', 'subtitle', 'theme', 'image_url', 'cta_label', 'cta_url', 'position', 'starts_at', 'ends_at', 'is_active'];
 
     protected function casts(): array
     {

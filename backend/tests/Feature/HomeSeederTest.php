@@ -26,14 +26,12 @@ class HomeSeederTest extends TestCase
             $this->assertNotEmpty($items, "{$block['key']} has content");
         }
 
-        // Banner CTAs point at real, purchasable products.
+        // Banners: our own gradient + text, CTAs into the store, no images.
+        $this->assertSame(count(HomeSeeder::BANNERS), Banner::count());
         foreach (Banner::all() as $banner) {
-            $slug = str_replace('/product/', '', $banner->cta_url);
-            $this->getJson("/api/v1/products/$slug")->assertOk()->assertJsonPath('data.offers.0.available_stock', fn ($n) => $n > 0);
-        }
-        $this->assertSame(3, Banner::count());
-        foreach (Banner::all() as $banner) {
-            $this->assertStringEndsWith('/header.jpg', $banner->image_url, 'banners are wide: landscape image');
+            $this->assertContains($banner->theme, Banner::THEMES);
+            $this->assertNull($banner->image_url, 'no third-party artwork');
+            $this->assertStringStartsWith('/store', $banner->cta_url);
         }
     }
 
@@ -42,6 +40,6 @@ class HomeSeederTest extends TestCase
         $this->seed([CatalogSeeder::class, HomeSeeder::class, HomeSeeder::class]);
 
         $this->assertSame(count(HomeSeeder::BLOCKS), HomeBlock::count());
-        $this->assertSame(3, Banner::count());
+        $this->assertSame(count(HomeSeeder::BANNERS), Banner::count());
     }
 }
