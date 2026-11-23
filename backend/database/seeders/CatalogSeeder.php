@@ -63,7 +63,9 @@ class CatalogSeeder extends Seeder
                             'platform_id' => $platforms[$platformSlug],
                             'region_id' => $regions[$regionSlug],
                             'description' => $this->description($title, $type, $developer, $data['platforms'][$platformSlug], $data['regions'][$regionSlug], $genreSlugs, $data['genres']),
-                            'cover_url' => $appId ? "https://cdn.akamai.steamstatic.com/steam/apps/{$appId}/header.jpg" : null,
+                            // Portrait capsule (600×900) to match the 4:5 product cards. The frontend
+                            // falls back to the landscape header.jpg, then a placeholder, if it 404s.
+                            'cover_url' => $appId ? self::steamImage($appId, 'library_600x900.jpg') : null,
                             'developer' => $developer,
                             'publisher' => $publisher,
                             'release_date' => $released,
@@ -86,6 +88,11 @@ class CatalogSeeder extends Seeder
             'Seeded %d products, %d offers, %d keys.',
             Product::count(), Offer::count(), ProductKey::count(),
         ));
+    }
+
+    public static function steamImage(int $appId, string $file): string
+    {
+        return "https://cdn.akamai.steamstatic.com/steam/apps/{$appId}/{$file}";
     }
 
     /** @return array<string, int> slug => id */

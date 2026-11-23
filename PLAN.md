@@ -167,6 +167,8 @@ personal_access_tokens  -- Sanctum
 
 **Money:** always integer cents plus a currency. Single currency (EUR) for now.
 
+**Covers:** Steam's portrait capsule `library_600x900.jpg` (4:5 cards). Checked 2026-11-23: 80 of 82 seeded apps have one; the 2 DLCs (2138330, 2778580) don't, and the frontend falls back to their landscape `header.jpg` (`lib/covers.ts`), then a text placeholder. Hero banners use `header.jpg`.
+
 **Seed data** (`CatalogSeeder`, data in `database/seeders/data/catalog.php`; deterministic RNG seed): 91 titles (83 games, 2 DLC, 6 gift cards/subscriptions) → 323 platform × region products, 8 platforms, 5 regions, 17 genres, 12 fictional sellers, 1,277 offers (2–6 per product, about 8% inactive, about 50% with a "was" price), and 14,823 fake keys (`XXXXX-XXXXX-XXXXX`). Sales counts decay with popularity. Demo user: `demo@example.com` / `password`. Covers come from public Steam CDN header images and fall back to placeholders. No Eneba-owned assets (logo, artwork) are used.
 
 ---
@@ -327,7 +329,6 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
   - Mitigation: rewrote the statement as per-product correlated subqueries (two index lookups per row, no self-join), so work is bounded whatever the plan. The local `eneba_test` DB has `statement_timeout = 60s`, so a recurrence fails fast instead of hanging.
   - Status (2026-11-23): after the rewrite, 0 failures in 20 consecutive full-suite runs (vs 2 in 13 before). Strong evidence (about 4% chance of that by luck at the old rate) but no root cause, so keep the timeout guard and reopen if it recurs, especially after bulk imports in production.
 
-- **Seeded covers are landscape.** `CatalogSeeder` stores Steam's `header.jpg` (460×215), but product cards are portrait 4:5 like Eneba's, so covers are heavily cropped. Steam's `library_600x900.jpg` (portrait) fits and is what `/dev/ui` uses. Switch the seeder (backend change, not done in M2).
 
 ## 11. Open questions / later
 - Variant switching: the backend already returns `variants` by exact title match. A `group_slug` is only needed if titles diverge between variants.

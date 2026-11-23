@@ -41,7 +41,8 @@ class HomeSeeder extends Seeder
 
             Banner::query()->updateOrCreate(['title' => $headline], [
                 'subtitle' => $subline,
-                'image_url' => $product->cover_url,
+                // Banners are wide: use Steam's landscape header, not the portrait card cover.
+                'image_url' => str_replace('/library_600x900.jpg', '/header.jpg', $product->cover_url),
                 'cta_label' => 'Buy now',
                 'cta_url' => "/product/{$product->slug}",
                 'position' => $position,

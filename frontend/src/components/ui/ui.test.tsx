@@ -92,7 +92,25 @@ describe('ProductCard', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('falls back to a text placeholder when the cover fails or is missing', () => {
+  it('falls back from a Steam portrait capsule to its header, then to a placeholder', () => {
+    const portrait = 'https://cdn.akamai.steamstatic.com/steam/apps/1091500/library_600x900.jpg';
+    const { container } = renderWithRouter(<ProductCard {...props} coverUrl={portrait} />);
+    const img = () => container.querySelector('img');
+    const failImage = () => {
+      const el = img();
+      if (!el) throw new Error('no <img> to fail');
+      fireEvent.error(el);
+    };
+
+    expect(img()).toHaveAttribute('src', portrait);
+    failImage();
+    expect(img()).toHaveAttribute('src', 'https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg');
+    failImage();
+    expect(img()).toBeNull();
+    expect(screen.getByText('Elden Ring', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
+  });
+
+  it('falls back to a text placeholder when a non-Steam cover fails or is missing', () => {
     const { container, unmount } = renderWithRouter(<ProductCard {...props} />);
     const img = container.querySelector('img');
     expect(img).not.toBeNull();

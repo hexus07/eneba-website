@@ -30,6 +30,17 @@ class CatalogSeederTest extends TestCase
         $this->assertOfferStatsMatchActiveOffers();
         $this->assertKeysAreEncryptedUniqueAndWellFormed();
         $this->assertVariantsArePlatformAndRegionSpecific();
+        $this->assertCoversArePortraitSteamCapsules();
+    }
+
+    private function assertCoversArePortraitSteamCapsules(): void
+    {
+        $covers = Product::query()->whereNotNull('cover_url')->pluck('cover_url');
+
+        $this->assertNotEmpty($covers);
+        foreach ($covers as $url) {
+            $this->assertMatchesRegularExpression('#^https://cdn\.akamai\.steamstatic\.com/steam/apps/\d+/library_600x900\.jpg$#', $url);
+        }
     }
 
     private function assertPlannedSize(): void

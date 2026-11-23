@@ -27,8 +27,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// Steam's portrait capsule (600×900) fits the 4:5 card; the backend seeder currently stores the
-// landscape header.jpg (460×215), which crops badly (see PLAN.md open issues). Plus a broken URL.
+// Seeded covers are Steam's portrait capsule (600×900), which fits the 4:5 card. If it 404s the card
+// falls back to the landscape header.jpg, then a placeholder (lib/covers.ts). Plus a broken URL.
 const COVER = 'https://cdn.akamai.steamstatic.com/steam/apps/1091500/library_600x900.jpg';
 const BROKEN = 'https://example.invalid/missing.jpg';
 

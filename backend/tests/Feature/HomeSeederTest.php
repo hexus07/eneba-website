@@ -32,6 +32,9 @@ class HomeSeederTest extends TestCase
             $this->getJson("/api/v1/products/$slug")->assertOk()->assertJsonPath('data.offers.0.available_stock', fn ($n) => $n > 0);
         }
         $this->assertSame(3, Banner::count());
+        foreach (Banner::all() as $banner) {
+            $this->assertStringEndsWith('/header.jpg', $banner->image_url, 'banners are wide: landscape image');
+        }
     }
 
     public function test_is_idempotent(): void
