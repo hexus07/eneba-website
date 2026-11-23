@@ -134,6 +134,42 @@ class HomeBlockProvidersTest extends TestCase
         $this->assertCount(3, $this->block('new_releases', ['limit' => 3]));
     }
 
+    // ---- by_platform ---------------------------------------------------------------------
+
+    public function test_by_platform_lists_in_stock_products_of_the_configured_platform_by_popularity(): void
+    {
+        $steam = Platform::factory()->create(['slug' => 'steam']);
+        $psn = Platform::factory()->create(['slug' => 'psn']);
+        $this->inStock('Steam Hit', ['platform_id' => $steam->id, 'sales_count' => 900]);
+        $this->inStock('Steam Niche', ['platform_id' => $steam->id, 'sales_count' => 10]);
+        $this->inStock('PSN Hit', ['platform_id' => $psn->id, 'sales_count' => 5000]);
+        Product::factory()->withoutOffers()->titled('Steam Sold Out')->create(['platform_id' => $steam->id, 'sales_count' => 9999]);
+
+        HomeBlock::factory()->create(['key' => 'b', 'type' => 'by_platform', 'config' => ['platform' => 'steam', 'limit' => 5]]);
+        $data = $this->getJson('/api/v1/home/blocks/b')->assertOk()->json('data');
+
+        $this->assertSame(['Steam Hit', 'Steam Niche'], array_column($data['items'], 'title'));
+        $this->assertSame('/store?platform=steam', $data['see_all_url']);
+    }
+
+    public function test_by_platform_without_a_platform_is_empty(): void
+    {
+        $this->inStock('Anything');
+        HomeBlock::factory()->create(['key' => 'b', 'type' => 'by_platform', 'config' => []]);
+
+        $this->getJson('/api/v1/home/blocks/b')->assertOk()
+            ->assertJsonPath('data.items', [])->assertJsonPath('data.see_all_url', null);
+    }
+
+    public function test_product_blocks_link_to_the_matching_store_view(): void
+    {
+        foreach (['best_sellers' => '/store?sort=popular', 'deals' => '/store?sort=price_asc', 'new_releases' => '/store?sort=newest'] as $type => $url) {
+            HomeBlock::query()->delete();
+            HomeBlock::factory()->create(['key' => 'b', 'type' => $type]);
+            $this->getJson('/api/v1/home/blocks/b')->assertJsonPath('data.see_all_url', $url);
+        }
+    }
+
     // ---- platform_tiles ------------------------------------------------------------------
 
     public function test_platform_tiles_count_in_stock_products_and_link_to_store(): void

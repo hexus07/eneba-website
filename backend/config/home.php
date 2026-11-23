@@ -9,6 +9,7 @@ return [
         'best_sellers' => Blocks\BestSellersBlockProvider::class,
         'deals' => Blocks\DealsBlockProvider::class,
         'new_releases' => Blocks\NewReleasesBlockProvider::class,
+        'by_platform' => Blocks\ByPlatformBlockProvider::class,
         'platform_tiles' => Blocks\PlatformTilesBlockProvider::class,
     ],
 ];

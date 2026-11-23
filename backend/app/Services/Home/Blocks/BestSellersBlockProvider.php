@@ -45,6 +45,9 @@ class BestSellersBlockProvider implements BlockProvider
             );
         }
 
-        return ['items' => ProductCardResource::collection($products)->resolve()];
+        return [
+            'items' => ProductCardResource::collection($products)->resolve(),
+            'see_all_url' => '/store?sort=popular',
+        ];
     }
 }

@@ -43,6 +43,6 @@ class DealsBlockProvider implements BlockProvider
                 'discount_percent' => (int) $o->discount_percent,
                 'seller_name' => $o->seller->name,
             ],
-        ])->all()];
+        ])->all(), 'see_all_url' => '/store?sort=price_asc'];
     }
 }

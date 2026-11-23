@@ -14,7 +14,9 @@ class HomeSeeder extends Seeder
         ['key' => 'hero', 'type' => 'hero_banner', 'title' => 'Featured', 'config' => ['limit' => 5]],
         ['key' => 'best-sellers', 'type' => 'best_sellers', 'title' => 'Best sellers', 'config' => ['limit' => 12, 'days' => 30]],
         ['key' => 'top-deals', 'type' => 'deals', 'title' => 'Top deals', 'config' => ['limit' => 12, 'min_discount_percent' => 30]],
+        ['key' => 'top-steam', 'type' => 'by_platform', 'title' => 'Top on Steam', 'config' => ['platform' => 'steam', 'limit' => 12]],
         ['key' => 'new-releases', 'type' => 'new_releases', 'title' => 'New releases', 'config' => ['limit' => 12]],
+        ['key' => 'playstation', 'type' => 'by_platform', 'title' => 'PlayStation picks', 'config' => ['platform' => 'psn', 'limit' => 12]],
         ['key' => 'platforms', 'type' => 'platform_tiles', 'title' => 'Shop by platform', 'config' => []],
     ];
 

@@ -21,6 +21,9 @@ class NewReleasesBlockProvider implements BlockProvider
             ->limit((int) $block->setting('limit', 12))
             ->get();
 
-        return ['items' => ProductCardResource::collection($products)->resolve()];
+        return [
+            'items' => ProductCardResource::collection($products)->resolve(),
+            'see_all_url' => '/store?sort=newest',
+        ];
     }
 }
