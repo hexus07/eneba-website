@@ -57,9 +57,8 @@ export function colors(): Record<string, unknown> {
 
 export const spacing = (): Record<string, string> => ({ px: '1px', 0: '0px', ...(group(raw.space) as Record<string, string>) });
 export const borderRadius = () => group(raw.radius) as Record<string, string>;
-// "Inter Variable" is the family name of the self-hosted @fontsource-variable/inter; the token's
-// "Inter" stays next in the stack for systems that have it installed.
-export const fontFamily = () => ({ sans: ['Inter Variable', ...(resolve(raw.font.family.base.$value) as string[])] });
+// Metropolis is self-hosted (src/main.tsx imports @fontsource/metropolis, weights 400–800).
+export const fontFamily = () => ({ sans: resolve(raw.font.family.base.$value) as string[] });
 export const fontWeight = () =>
   Object.fromEntries(Object.entries(group(raw.font.weight as Json)).map(([k, v]) => [k, String(v)]));
 

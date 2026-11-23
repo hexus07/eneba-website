@@ -11,8 +11,9 @@ import { Scanner } from '@tailwindcss/oxide';
 const BASE = import.meta.dirname;
 const UTILITY =
   /^(?:[a-z0-9-]+:)*-?(?:bg|text|border|outline|ring|fill|stroke|p[xytrbl]?|m[xytrbl]?|gap(?:-[xy])?|space-[xy]|w|h|size|min-w|max-w|min-h|max-h|top|left|right|bottom|inset(?:-[xy])?|rounded(?:-[a-z]+)?|shadow|font|leading|tracking|backdrop-blur|aspect|z|translate-[xy]|line-clamp|duration|opacity)-/;
-// Prose that happens to look like a utility: "text-height skeletons" (comment), "top-ups" (placeholder).
-const PROSE = new Set(['text-height', 'top-ups']);
+// Prose that happens to look like a utility: "text-height skeletons" (comment), "top-ups" (placeholder),
+// "font-display: swap" (CSS property named in a comment in main.tsx).
+const PROSE = new Set(['text-height', 'top-ups', 'font-display']);
 
 async function invalidUtilities(candidates: string[]): Promise<string[]> {
   const ds = await __unstable__loadDesignSystem('@import "tailwindcss";\n@config "./tailwind.config.ts";', { base: BASE });

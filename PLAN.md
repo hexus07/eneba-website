@@ -271,7 +271,7 @@ eneba-website/
   - background: deep violet/indigo gradient (`bg-900 ≈ #1a0b3d`, `bg-800 ≈ #2a1162`), card surface slightly lighter
   - accent / CTA: yellow (`≈ #ffd200`) on dark text; secondary accent purple (`≈ #7c3aed`)
   - discount badge: green/lime; text: white / white-70%
-  - font: confirm on site (geometric sans); fallback `Inter`
+  - font: **Metropolis** (confirmed on eneba.com in DevTools), self-hosted via `@fontsource/metropolis` (latin, 400–800, `font-display: swap`); fallback `Inter, system-ui, sans-serif`. License: public domain (Unlicense), not OFL (checked against the upstream repo); text shipped at `frontend/public/licenses/metropolis-UNLICENSE.txt`
   - product card: cover image, platform + region chips, title (2-line clamp), "From" price, discount %
 - Layouts to match: header (logo, centered search, cart, account), store grid with left filter sidebar (drawer on mobile), product page with offers column, dark footer.
 - Recreate the look; do **not** copy Eneba's logo, illustrations or copyrighted imagery. Use a text wordmark.
@@ -312,7 +312,7 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
 
 1. **M0 Scaffolding:** 🟡 backend + frontend scaffolds and `apiClient` done. Missing: docker-compose, CI. Planned: monorepo, docker-compose Postgres, Laravel API skeleton + Sanctum, Vite/Tailwind app, apiClient, CI lint/test.
 2. **M1 Data:** ✅ migrations, models, factories, realistic seeders, Offer observer.
-3. **M2 Design system:** ✅ `frontend/` scaffold, tokens → Tailwind theme (palette and spacing replaced, enforced by lint and tests), `components/ui` (Button ×4, Badge ×4, PriceTag, ProductCard with hover add-to-cart, SectionHeading, TextInput, Checkbox, QuantityStepper, Spinner, Skeleton), AppLayout with Header and Footer Full/Checkout/Auth, `/dev/ui` showcase, `apiClient`, `money`. Open: font family and brand name to confirm (§10). Planned: sample eneba.com, finalize tokens, build `components/ui`, AppLayout (header/footer).
+3. **M2 Design system:** ✅ `frontend/` scaffold, tokens → Tailwind theme (palette and spacing replaced, enforced by lint and tests), `components/ui` (Button ×4, Badge ×4, PriceTag, ProductCard with hover add-to-cart, SectionHeading, TextInput, Checkbox, QuantityStepper, Spinner, Skeleton), AppLayout with Header and Footer Full/Checkout/Auth, `/dev/ui` showcase, `apiClient`, `money`. Font: Metropolis. Brand: "gamekeys" (confirmed). Planned: sample eneba.com, finalize tokens, build `components/ui`, AppLayout (header/footer).
 4. **M3 Store + Search (deep):** 🟡 backend: search, filters (platform/region/price), sort, pagination, suggest. Missing: genre/type/in_stock filters, `FacetBuilder`, `/filters`, did-you-mean, entire StorePage. Planned: `ProductSearch`, `ProductFilter`, `FacetBuilder` + tests. StorePage with URL-synced filters, drawer, pagination, autocomplete, did-you-mean.
 5. **M4 Homepage:** 🟡 backend ✅ (home_blocks, 5 providers, endpoints, seeder). Missing: frontend registry + isolated loading/error states. Planned: home_blocks, providers, `/home` endpoints. Block registry with isolated loading and error states.
 6. **M5 Product page:** 🟡 backend ✅ (`/products/{slug}` with offers + variants). Missing: the page. Planned: details and offers list, add to cart.
@@ -328,7 +328,6 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
   - Status (2026-11-23): after the rewrite, 0 failures in 20 consecutive full-suite runs (vs 2 in 13 before). Strong evidence (about 4% chance of that by luck at the old rate) but no root cause, so keep the timeout guard and reopen if it recurs, especially after bulk imports in production.
 
 - **Seeded covers are landscape.** `CatalogSeeder` stores Steam's `header.jpg` (460×215), but product cards are portrait 4:5 like Eneba's, so covers are heavily cropped. Steam's `library_600x900.jpg` (portrait) fits and is what `/dev/ui` uses. Switch the seeder (backend change, not done in M2).
-- **Font family unconfirmed.** tokens.json says Inter (now self-hosted via `@fontsource-variable/inter`), but the screens look like a geometric sans (Metropolis-like), and FIGMA_CLEANUP.md §8 warns the import may have substituted it. One-line change in `design-tokens.ts` once checked on eneba.com.
 
 ## 11. Open questions / later
 - Variant switching: the backend already returns `variants` by exact title match. A `group_slug` is only needed if titles diverge between variants.

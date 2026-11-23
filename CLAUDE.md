@@ -3,7 +3,7 @@
 Eneba-style digital-key marketplace. **Read `PLAN.md` first.** It is the source of truth for scope, data model and API. Update it when a decision changes.
 
 ## Layout
-- `frontend/`: React 19 + TypeScript 6.0 (strict) + Vite 8 + Tailwind 4 (JS config via `@config`), TanStack Query, React Router 7, Zustand, ESLint (typescript-eslint strict), Vitest + Testing Library
+- `frontend/`: React 19 + TypeScript 6.0 (strict) + Vite 8 + Tailwind 4 (JS config via `@config`), TanStack Query, React Router 7, Zustand, ESLint (typescript-eslint strict), Vitest + Testing Library. Font: Metropolis, self-hosted via `@fontsource/metropolis` (import more weights in `src/main.tsx` only if a token needs them)
 - `design/`: `tokens.json` (DTCG, the only source of design values), `FIGMA_CLEANUP.md` (naming map, reference-only artwork), `screens/` (eneba.com reference captures, **never commit or ship them**)
 - `backend/`: Laravel 13, API only, PostgreSQL, Sanctum bearer tokens
 - `docker-compose.yml`: local Postgres

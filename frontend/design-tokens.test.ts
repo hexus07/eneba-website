@@ -38,6 +38,10 @@ describe('design-tokens', () => {
     expect(tokens.fontSize()['h2-sm']?.[0]).toBe('18px');
   });
 
+  it('uses Metropolis with the Inter / system fallback stack', () => {
+    expect(tokens.fontFamily().sans).toEqual(['Metropolis', 'Inter', 'system-ui', 'sans-serif']);
+  });
+
   it('exposes spacing, radius, shadow and blur from tokens.json', () => {
     expect(tokens.spacing()['15']).toBe('15px');
     expect(tokens.borderRadius().none).toBe('0px');
