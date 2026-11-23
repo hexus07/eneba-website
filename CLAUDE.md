@@ -51,7 +51,11 @@ Run the relevant tests, typecheck and lint before calling a task done.
 - Third-party/Eneba artwork marked "(reference — do not export)" in FIGMA_CLEANUP.md (logo, banners, payment and app-store logos, PC Mag, Trustpilot) is never reproduced. Icons are our own stroke SVGs in `components/ui/icons.tsx`.
 - Mobile-first and responsive down to 360px. Every async view has loading (skeleton), empty and error states.
 - Use strict TypeScript and no `any`. API types live in each feature's `types.ts` and mirror the Laravel Resources.
-- Format money only with `lib/money.ts`.
+- Format and parse money only with `lib/money.ts` (`formatMoney`, `eurosToCents`). URL and API prices stay in cents.
+- Product images go through `CoverImage` (portrait capsule → header.jpg → fallback), never a bare `<img src={cover_url}>`.
+- Store state: change it only through `useCatalogParams` / `catalogParams.ts` (canonical URL = one query-cache entry). Pagination and suggestions are links, not buttons.
+- Tests: `waitFor`/`findBy*` don't drive Vitest fake timers, so test timing in hooks with fake timers and components with real timers. API calls in component tests go through `mockApi()`.
+- "Done" means `npm run typecheck && npm run lint && npm test && npm run build`. Vitest alone misses type errors in test files (which then break `tsc -b` in the build).
 - Accessibility: semantic elements, labelled inputs, a keyboard-navigable autocomplete, and visible focus rings.
 
 ## Styling / branding

@@ -67,13 +67,13 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 - Relevance order: title starts with q → some word starts with q → `word_similarity` → `sales_count`.
 - A query of only symbols (`%`, `!!!`) matches nothing rather than everything.
 - No `tsvector` full-text search. Titles are short names, not prose, so stemming and stop-words add little, and trigram + ILIKE already covers whole words, partials and typos. Revisit only if we search descriptions.
-- **Not implemented yet:** on zero results, return a "did you mean" suggestion (the title with the highest `similarity`).
+- "Did you mean" (implemented): on a zero-result search, `meta.did_you_mean` is the title with the best `similarity() + word_similarity()` among products matching the other filters (so following it finds results), minimum score 0.3. `word_similarity` alone ranks badly: "eldn rng" ties Elden Ring with "The Elder Scrolls" (0.33) and the more popular one wins; the sum separates them (0.67 vs 0.40).
 - Known limit: a typo in *every* short word ("eldn rng", word_similarity 0.33) falls below the 0.5 threshold. One typo per phrase works ("eldn ring" 0.62, "elden rng" 0.70).
 - `GET /search/suggest?q=` serves the header autocomplete (implemented: top 8 in-stock products, at least 2 characters, same matching, ranking and threshold as the catalog via `ProductFilter::suggest`). The debounce and keyboard navigation are frontend work.
 
 ### Store / catalog
-- `GET /products` accepts filters for platform[], region[], genre[] *(not yet)*, type *(not yet)*, price_min/max and in_stock *(not yet)*, plus `sort` (relevance | popular | price_asc | price_desc | newest) and pagination.
-- **Not implemented yet:** the response includes **facets**: counts per platform/region/genre/type under the current filters, so each facet's count excludes its own filter. The price range (min/max) is included too.
+- `GET /products` accepts filters for platform[], region[], genre[], type[] (repeated or CSV; OR within a dimension, AND across), price_min/max, plus `sort` (relevance | popular | price_asc | price_desc | newest) and pagination. `in_stock` is not implemented.
+- Facets (implemented): `meta.facets.{platform,region,genre}` = `[{slug, name, count, selected}]` for the current query, disjunctive (each dimension counts against the other filters only). Selected options stay listed at 0. `meta.price_range` = min/max of the results ignoring the price filter. No type facet (type comes from the nav links).
 - Price filtering and sorting use the denormalized `products.min_price_cents`, which an `Offer` observer recomputes along with `offers_count`.
 - On the frontend, filter state lives in the URL query string as the single source of truth. That makes results shareable and keeps back/forward working.
 
@@ -188,10 +188,10 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 ### Catalog & search
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/products` | **Implemented:** `q, platform[] (or csv), region[] (or csv), price_min, price_max (cents, inclusive), sort=relevance\|popular\|price_asc\|price_desc\|newest, page, per_page(≤48)` → standard Laravel pagination `{data, links, meta}`. Planned: `genre[], type, in_stock`, facets, did_you_mean |
+| GET | `/products` | **Implemented:** `q, platform, region, genre, type` (repeated or CSV), `price_min, price_max` (cents, inclusive), `sort=relevance\|popular\|price_asc\|price_desc\|newest, page, per_page(≤48)` → `{data, links, meta}`; meta adds `facets`, `price_range`, `did_you_mean`. Not implemented: `in_stock` |
 | GET | `/products/{slug}` | **Implemented:** product + genres + purchasable offers (active and in stock, cheapest first) with seller rating, reviews, verified flag, stock and `discount_percent`, plus `variants` (same title on other platforms/regions). 404 for unknown slug |
-| GET | `/filters` | *Not implemented yet.* All platforms, regions, genres, types (for initial filter UI) |
-| GET | `/search/suggest` | **Implemented:** `q` (at least 2 chars) → top 8 in-stock product cards |
+| GET | `/filters` | *Not needed:* facets on `/products` already list every option with counts, so the store needs no separate call. |
+| GET | `/search/suggest` | **Implemented:** `q` (at least 2 chars) → top 8 in-stock products, slim shape `{ slug, title, cover_url, min_price_cents, currency, platform }` |
 
 ### Home
 | Method | Path | Notes |
@@ -315,7 +315,7 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
 1. **M0 Scaffolding:** 🟡 backend + frontend scaffolds and `apiClient` done. Missing: docker-compose, CI. Planned: monorepo, docker-compose Postgres, Laravel API skeleton + Sanctum, Vite/Tailwind app, apiClient, CI lint/test.
 2. **M1 Data:** ✅ migrations, models, factories, realistic seeders, Offer observer.
 3. **M2 Design system:** ✅ `frontend/` scaffold, tokens → Tailwind theme (palette and spacing replaced, enforced by lint and tests), `components/ui` (Button ×4, Badge ×4, PriceTag, ProductCard with hover add-to-cart, SectionHeading, TextInput, Checkbox, QuantityStepper, Spinner, Skeleton), AppLayout with Header and Footer Full/Checkout/Auth, `/dev/ui` showcase, `apiClient`, `money`. Font: Metropolis. Brand: "gamekeys" (confirmed). Planned: sample eneba.com, finalize tokens, build `components/ui`, AppLayout (header/footer).
-4. **M3 Store + Search (deep):** 🟡 backend: search, filters (platform/region/price), sort, pagination, suggest. Missing: genre/type/in_stock filters, `FacetBuilder`, `/filters`, did-you-mean, entire StorePage. Planned: `ProductSearch`, `ProductFilter`, `FacetBuilder` + tests. StorePage with URL-synced filters, drawer, pagination, autocomplete, did-you-mean.
+4. **M3 Store + Search (deep):** ✅ Backend: typo-tolerant search, platform/region/genre/type/price filters, disjunctive facets, price range, did-you-mean, slim suggest. Frontend: `/store` with URL-only state, facet sidebar (drawer on mobile), price range, chips, sort, pagination, skeleton/error/empty states, "Did you mean"; header autocomplete (debounced, ARIA combobox, keyboard). Gaps: no add-to-cart on store cards (the card resource has no offer id, the product page will have it), no `in_stock` filter, and the facet/price queries run on every page change (no caching).
 5. **M4 Homepage:** 🟡 backend ✅ (home_blocks, 5 providers, endpoints, seeder). Missing: frontend registry + isolated loading/error states. Planned: home_blocks, providers, `/home` endpoints. Block registry with isolated loading and error states.
 6. **M5 Product page:** 🟡 backend ✅ (`/products/{slug}` with offers + variants). Missing: the page. Planned: details and offers list, add to cart.
 7. **M6 Auth + Cart:** ✅ backend (frontend auth/cart UI not started) register/login, protected routes, guest cart and merge.
