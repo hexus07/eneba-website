@@ -130,11 +130,15 @@ class ProductFilter
         return ['min' => $row?->min === null ? null : (int) $row->min, 'max' => $row?->max === null ? null : (int) $row->max];
     }
 
+    /** Candidates read per suggestion row: titles have up to ~5 platform/region variants. */
+    private const SUGGEST_CANDIDATES_PER_ROW = 10;
+
     /**
-     * Header autocomplete: same matching and ranking as the catalog's `q`, so the dropdown and the
-     * full results page always agree. Only purchasable products; no count query.
+     * Header autocomplete, one row per TITLE: same matching and ranking as the catalog's `q` decide
+     * which titles and in what order; each row is that title's cheapest in-stock variant (its slug,
+     * cover and platform) with `variants_count` = in-stock variants of the title.
      *
-     * @return Collection<int, Product>
+     * @return Collection<int, Product> cheapest variant per title, with `variants_count` set
      */
     public function suggest(string $rawQuery, int $limit): Collection
     {
@@ -143,11 +147,24 @@ class ProductFilter
             return new Collection;
         }
 
-        $query = Product::query()->select('products.*')->with('platform')->where('products.offers_count', '>', 0);
+        $query = Product::query()->select('products.title')->where('products.offers_count', '>', 0);
         $this->search->apply($query, $q);
         $this->search->orderByRelevance($query, $q);
+        $ranked = $this->withSearchThreshold($q, fn () => $query->limit($limit * self::SUGGEST_CANDIDATES_PER_ROW)->pluck('title'));
+        $titles = $ranked->unique()->take($limit)->values();
 
-        return $this->withSearchThreshold($q, fn () => $query->limit($limit)->get());
+        $variants = Product::query()->with('platform')
+            ->whereIn('title', $titles)->where('offers_count', '>', 0)
+            ->orderBy('min_price_cents')->orderBy('id')
+            ->get()
+            ->groupBy('title');
+
+        return new Collection($titles->map(function (string $title) use ($variants) {
+            $group = $variants[$title];
+            $cheapest = $group->first();
+
+            return $cheapest->setAttribute('variants_count', $group->count());
+        })->all());
     }
 
     /**

@@ -184,7 +184,7 @@ Response conventions: `{ data, meta? }`. Errors follow `{ message, errors? }` (L
 | GET | `/products` | **Implemented:** `q, platform, region, genre, type` (repeated or CSV), `price_min, price_max` (cents, inclusive), `sort=relevance\|popular\|price_asc\|price_desc\|newest, page, per_page(≤48)` → `{data, links, meta}`; meta adds `facets`, `price_range`, `did_you_mean`. Not implemented: `in_stock` |
 | GET | `/products/{slug}` | **Implemented:** product + genres + purchasable offers (active and in stock, cheapest first) with seller rating, reviews, verified flag, stock and `discount_percent`, plus `variants` (same title on other platforms/regions). 404 for unknown slug |
 | GET | `/filters` | *Not needed:* facets on `/products` already list every option with counts, so the store needs no separate call. |
-| GET | `/search/suggest` | **Implemented:** `q` (at least 2 chars) → top 8 in-stock products, slim shape `{ slug, title, cover_url, min_price_cents, currency, platform }` |
+| GET | `/search/suggest` | **Implemented:** `q` (at least 2 chars) → top 8 **titles** (relevance order), each its cheapest in-stock variant: `{ slug, title, cover_url, min_price_cents, currency, platform, variants_count }` |
 
 ### Home
 | Method | Path | Notes |
