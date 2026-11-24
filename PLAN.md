@@ -276,8 +276,20 @@ eneba-website/
 
 ## 7. Deployment
 
+Step-by-step dashboard instructions: **`DEPLOY.md`**.
+
 | Piece | Where | Notes |
 |---|---|---|
+| Frontend | Vercel | root dir `frontend/` (build reads `../design/tokens.json`), `VITE_API_URL` at build time; `frontend/vercel.json`: SPA rewrite, immutable `/assets` caching, strict CSP (no `unsafe-inline`; `connect-src` `*.onrender.com`, `img-src` Steam CDN) |
+| Backend | Render web service (Docker, free, Frankfurt) | `render.yaml` Blueprint; `backend/Dockerfile` = composer stage + `serversideup/php:8.4-fpm-nginx` (:8080); `docker/entrypoint.d/60-release.sh` at container start: config/route/event cache → `migrate --force --database=pgsql_direct` → optional `db:seed` (`SEED_DEMO_DATA`, idempotent). Health check `/up`. `trustProxies('*')` so rate limits see client IPs |
+| DB | Neon (eu-central-1) | `DB_URL` = **pooled** (PgBouncer transaction mode, `DB_EMULATE_PREPARES=true`); `DB_DIRECT_URL` = direct, used by the `pgsql_direct` connection for migrations/seeding |
+| Payments | `PAYMENT_DRIVER=fake` in prod | Stripe test mode works on the backend (`STRIPE_*`, webhook `https://<render>/api/v1/payments/stripe/webhook`) but the frontend has no card form yet |
+
+CORS (`config/cors.php`): `CORS_ALLOWED_ORIGINS` (exact, comma-separated; default localhost:5173/4173) + optional `CORS_ALLOWED_ORIGIN_PATTERNS` (regex, Vercel previews). Paths `api/*`, no credentials (bearer tokens), headers Accept/Authorization/Content-Type/Idempotency-Key. No scheduler on Render free: reservation expiry also runs inline at checkout.
+
+Verified locally: image against Postgres 16 behind PgBouncer (transaction mode): migrate via direct, seed, full purchase via pooler, restart idempotent; production build served with the vercel.json headers → no CSP violations.
+
+---|---|---|
 | Frontend | Vercel | `frontend/` root, `VITE_API_URL`, SPA rewrite in `vercel.json`, CSP header |
 | Backend | Render Web Service (Docker) | `serversideup/php:8.3-fpm-nginx` base; `php artisan migrate --force` on deploy; health check `/up` |
 | DB | Neon | use **pooled** connection string; PgBouncer transaction mode → `PDO::ATTR_EMULATE_PREPARES => true`; direct (unpooled) URL for migrations |
@@ -314,7 +326,7 @@ CORS (*not configured yet*: Laravel's default currently allows any origin): allo
 6. **M5 Product page:** ✅ `/product/:slug` (product.png): breadcrumbs, cover, title + platform/region, facts, version switcher, featured cheapest offer with Add to cart, seller offer rows (rating, verified, price, discount, "Lowest price", low stock), description + details + genre links, "Gamers also viewed" (same first genre via the catalog API); loading / error / 404 / out-of-stock states. Gaps: no "Best cashback" badge (there is no cashback data), no media gallery or reviews, no wishlist.
 7. **M6 Auth + Cart:** ✅ Backend (earlier) + `GET /me` alias + public `POST /cart/preview` (guest cart priced live, same shape as `GET /cart`). Frontend: login/register (login.png/register.png; email + password only), guest-cart merge on login (kept on failure), `?redirect=` with open-redirect guard, `RequireAuth` on /checkout and /orders, logout revoking the token; cart page (checkout.png) for guests and users with stock/region warnings; header count, toasts. Gaps: no password reset or email verification; no social / magic-link login; the 7-day token simply expires (no refresh).
 8. **M7 Checkout:** ✅ Reservation model (backend), checkout → payment (countdown) → keys (reveal + copy), order history. Gaps: Stripe Elements card form not wired (fake gateway only in the UI); Stripe never run against the real test API.
-9. **M8 Polish & deploy:** ⬜ not started. responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
+9. **M8 Polish & deploy:** 🟡 deploy config done (Docker/Render/Neon/Vercel/CORS, DEPLOY.md); polish items open. responsive pass, skeletons, empty states, a11y basics, Vercel/Render/Neon deploy, README with scope justification.
 
 ## 10. Open issues
 

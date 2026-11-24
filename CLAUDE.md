@@ -71,6 +71,8 @@ Run the relevant tests, typecheck and lint before calling a task done.
 - Never commit `.env` or secrets. `.env.example` files hold all required keys.
 
 ## Deploy notes
-- Neon: use the pooled URL for the app (`PDO::ATTR_EMULATE_PREPARES => true`) and the direct URL for migrations.
-- Render: Docker image, `migrate --force` on release, health check `/up`. CORS allows only the Vercel origin and `localhost:5173`.
+- Manual dashboard steps: `DEPLOY.md`. Infra as code: `render.yaml`, `backend/Dockerfile`, `backend/docker/entrypoint.d/60-release.sh`, `frontend/vercel.json`.
+- Neon: `DB_URL` = pooled URL for the app (`DB_EMULATE_PREPARES=true`), `DB_DIRECT_URL` = direct URL, used by the `pgsql_direct` connection for migrations/seeding.
+- Render: Docker image, `migrate --force` at container start (free plan has no pre-deploy hook), health check `/up`. CORS: `CORS_ALLOWED_ORIGINS` (Vercel origin; localhost:5173 by default), never `*`.
+- New runtime origins (images, APIs) must be added to the CSP in `frontend/vercel.json`. Never change the production `APP_KEY` (it encrypts product keys).
 - Stripe is in test mode only. `PAYMENT_DRIVER=fake|stripe`. Locally, forward webhooks with `stripe listen --forward-to localhost:8000/api/v1/payments/stripe/webhook`.
