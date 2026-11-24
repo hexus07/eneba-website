@@ -40,8 +40,13 @@ class ProductSearch
     }
 
     /**
-     * Order by relevance: titles starting with the query, then word-prefix matches,
-     * then trigram word similarity, then popularity as a tie-breaker.
+     * Order by relevance: titles starting with the query, then word-prefix matches, then
+     * word_similarity + similarity, then popularity as a tie-breaker.
+     *
+     * word_similarity alone ties too often on short typos: "eldn" scores 0.600 against "Elden Ring",
+     * "Elden Ring: Shadow of the Erdtree" AND "The Elder Scrolls V: Skyrim" (each shares the same 3 of
+     * its 5 trigrams), so popularity decided and Skyrim won. Whole-string similarity() separates them
+     * (0.231 vs 0.071). Same score as didYouMean(), so both rank alike.
      */
     public function orderByRelevance(Builder $query, string $normalized): Builder
     {
@@ -50,7 +55,7 @@ class ProductSearch
         return $query
             ->orderByRaw('(products.search_title LIKE ?) DESC', [$escaped.'%'])
             ->orderByRaw('(products.search_title LIKE ?) DESC', ['% '.$escaped.'%'])
-            ->orderByRaw('word_similarity(?, products.search_title) DESC', [$normalized])
+            ->orderByRaw('(word_similarity(?, products.search_title) + similarity(?, products.search_title)) DESC', [$normalized, $normalized])
             ->orderByDesc('products.sales_count')
             ->orderBy('products.id');
     }

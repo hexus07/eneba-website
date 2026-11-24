@@ -68,7 +68,7 @@ The brief says "a few features done extensively beat many minimal ones". The dep
 - Query strategy in `ProductSearch` (implemented). A product matches if either:
   1. `search_title ILIKE '%q%'` (prefix / partial names; the only path for queries under 3 chars)
   2. `q <% search_title` (pg_trgm word similarity ≥ `config('search.word_similarity_threshold')`, default 0.5). The threshold is set per request with `set_config(..., true)` inside a transaction, so it is safe behind Neon's transaction pooler.
-- Relevance order: title starts with q → some word starts with q → `word_similarity` → `sales_count`.
+- Relevance order: title starts with q → some word starts with q → `word_similarity + similarity` → `sales_count`. (`word_similarity` alone tied "eldn" at 0.600 for Elden Ring and The Elder Scrolls, and popularity picked Skyrim; whole-string `similarity` separates them, 0.231 vs 0.071.)
 - A query of only symbols (`%`, `!!!`) matches nothing rather than everything.
 - No `tsvector` full-text search. Titles are short names, not prose, so stemming and stop-words add little, and trigram + ILIKE already covers whole words, partials and typos. Revisit only if we search descriptions.
 - "Did you mean" (implemented): on a zero-result search, `meta.did_you_mean` is the title with the best `similarity() + word_similarity()` among products matching the other filters (so following it finds results), minimum score 0.3. `word_similarity` alone ranks badly: "eldn rng" ties Elden Ring with "The Elder Scrolls" (0.33) and the more popular one wins; the sum separates them (0.67 vs 0.40).
