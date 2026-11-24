@@ -97,4 +97,48 @@ class StripeGatewayTest extends TestCase
         $this->assertSame('pi_123', $request['params']['payment_intent']);
         $this->assertContains("Idempotency-Key: refund-{$order->id}", $request['headers']);
     }
+
+    public function test_payment_page_reload_gets_the_same_payment_intent(): void
+    {
+        $this->actingAsBuyer();
+        $this->addToCart($this->offerWithKeys(5, 1250));
+        $orderId = $this->postJson('/api/v1/checkout')->assertCreated()->json('data.id');
+
+        $this->getJson("/api/v1/checkout/{$orderId}/payment")->assertOk()
+            ->assertJsonPath('data.id', $orderId)
+            ->assertJsonPath('payment.client_secret', 'pi_123_secret_abc')
+            ->assertJsonPath('payment.publishable_key', 'pk_test_x');
+
+        // Both calls use the per-order Stripe idempotency key, so Stripe hands back one intent.
+        $this->assertCount(2, $this->http->requests);
+        $this->assertContains("Idempotency-Key: order-{$orderId}", $this->http->requests[1]['headers']);
+        $this->assertSame(1, Order::query()->count());
+    }
+
+    public function test_no_payment_session_once_the_order_is_not_payable(): void
+    {
+        $this->actingAsBuyer();
+        $this->addToCart($this->offerWithKeys(5));
+        $orderId = $this->postJson('/api/v1/checkout')->json('data.id');
+        $this->travel(16)->minutes();
+
+        $this->getJson("/api/v1/checkout/{$orderId}/payment")->assertOk()
+            ->assertJsonPath('data.status', 'expired')
+            ->assertJsonPath('payment', null);
+        $this->assertCount(1, $this->http->requests, 'no new intent for an expired order');
+    }
+
+    public function test_payment_session_is_private_and_requires_auth(): void
+    {
+        $this->actingAsBuyer();
+        $this->addToCart($this->offerWithKeys(5));
+        $orderId = $this->postJson('/api/v1/checkout')->json('data.id');
+
+        $this->actingAsBuyer(); // someone else
+        $this->getJson("/api/v1/checkout/{$orderId}/payment")->assertNotFound();
+        $this->getJson('/api/v1/checkout/not-a-uuid/payment')->assertNotFound();
+
+        $this->app['auth']->forgetGuards();
+        $this->withHeaders(['Authorization' => ''])->getJson("/api/v1/checkout/{$orderId}/payment")->assertUnauthorized();
+    }
 }

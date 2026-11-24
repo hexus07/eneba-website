@@ -25,4 +25,15 @@ class CheckoutController extends Controller
             'payment' => $payment?->toArray(),
         ], $order->wasRecentlyCreated ? 201 : 200);
     }
+
+    /** GET /checkout/{order}/payment: resume paying an order (client_secret after a page reload). */
+    public function payment(Request $request, string $order, CheckoutService $checkout): JsonResponse
+    {
+        [$order, $payment] = $checkout->paymentFor($request->user()->orders()->findOrFail($order));
+
+        return response()->json([
+            'data' => new OrderResource($order->load('items.product')),
+            'payment' => $payment?->toArray(),
+        ]);
+    }
 }

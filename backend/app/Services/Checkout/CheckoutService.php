@@ -107,6 +107,18 @@ class CheckoutService
         return $order;
     }
 
+    /**
+     * The payment session of an existing order, for a payment page that was reloaded or reopened.
+     * Same idempotent path as a replayed checkout: Stripe returns the SAME PaymentIntent per order.
+     * Null session when the order is no longer payable (paid, failed, expired).
+     *
+     * @return array{0: Order, 1: ?PaymentSession}
+     */
+    public function paymentFor(Order $order): array
+    {
+        return $this->resume($order);
+    }
+
     /** @return array{0: Order, 1: ?PaymentSession} */
     private function resume(Order $order): array
     {
