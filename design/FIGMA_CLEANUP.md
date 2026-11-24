@@ -41,7 +41,7 @@ The intended pages were 00 Tokens / 01 Components / 02 Home / 04 Product / 05 Ca
 
 There is no Store (catalog) or Orders screen in the import.
 Known quirks of the frames themselves (left as they are):
-- The Home frame is 4550 px tall, but its content ends around 3570 px.
+- The Home frame is 4550 px tall, but inj,ts content ends around 3570 px.
 - `Checkout / Payment` shows only the header, the stepper and a spinner.
 - **No auto-layout anywhere.** Everything is absolutely positioned.
 
@@ -248,7 +248,7 @@ bind them to layers**. Binding the merged values would visibly change the import
 
 ## 8. Notes for the code agent
 
-- The font in the import is **Inter**, but html.to.design substituted it: eneba.com uses **Metropolis** (confirmed in DevTools, 2026-11-23). tokens.json now lists `Metropolis, Inter, system-ui, sans-serif`. Metropolis is public domain (Unlicense, per the upstream repo), not OFL. The frontend self-hosts it via `@fontsource/metropolis`, weights 400–800, latin subset, `font-display: swap`.
+- The font in the import is **Inter**. html.to.design may have substituted it, so check the live site before relying on it.
 - Product cards are square-cornered, with a 1 px `#63E3C2` border and a `#1F0A4D` body. The
   yellow `addToCartHover` button slides up into view on hover.
 - The Cart frame's email input contains a real address. Don't copy it into fixtures. Use `you@example.com`.
