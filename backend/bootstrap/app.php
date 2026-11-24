@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // API-only: unauthenticated requests get a JSON 401, never a redirect to a login page
         // (without this, a request lacking `Accept: application/json` 500s on the missing `login` route).
         $middleware->redirectGuestsTo(fn () => null);
+
+        // Behind Render's proxy: trust X-Forwarded-* so HTTPS is detected and rate limits key on the
+        // real client IP (otherwise every visitor shares the proxy's IP and one login throttle).
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

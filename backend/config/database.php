@@ -97,6 +97,30 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Neon's pooled endpoint is PgBouncer in transaction mode: emulate prepared statements so
+            // no server-side statement outlives the transaction that created it (DB_EMULATE_PREPARES).
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_EMULATE_PREPARES => filter_var(env('DB_EMULATE_PREPARES', false), FILTER_VALIDATE_BOOL) ?: null,
+            ]) : [],
+        ],
+
+        /*
+         * Neon's DIRECT (unpooled) endpoint, used only for migrations: DDL, advisory locks and long
+         * transactions don't belong on a transaction-mode pooler. Falls back to the main connection.
+         */
+        'pgsql_direct' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_DIRECT_URL', env('DB_URL')),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
         'sqlsrv' => [
