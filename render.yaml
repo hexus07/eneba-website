@@ -27,6 +27,14 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGINS  # https://<your-project>.vercel.app (comma-separate several, no trailing slash)
         sync: false
+      - key: PAYMENT_DRIVER        # "stripe" (test-mode card form) or "fake" (Pay / Decline buttons)
+        sync: false
+      - key: STRIPE_SECRET         # sk_test_… (test mode ONLY; leave empty with PAYMENT_DRIVER=fake)
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY  # pk_test_… (sent to the browser for the card form)
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET # whsec_… of the webhook endpoint you create in Stripe
+        sync: false
       # --- fixed settings ---
       - key: PORT
         value: "8080"              # the image's nginx listens on 8080
@@ -52,8 +60,6 @@ services:
         value: database
       - key: QUEUE_CONNECTION
         value: sync
-      - key: PAYMENT_DRIVER        # the frontend only has the fake (test) payment UI
-        value: fake
       - key: SANCTUM_EXPIRATION
         value: "10080"
       - key: CHECKOUT_RESERVATION_MINUTES

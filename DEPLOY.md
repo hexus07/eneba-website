@@ -67,6 +67,8 @@ You don't need to create any tables: the API migrates and seeds on its first sta
    | `DB_URL` | Neon **pooled** string (host with `-pooler`) |
    | `DB_DIRECT_URL` | Neon **direct** string (host without `-pooler`) |
    | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` for now. You set the real Vercel URL in step 4 |
+   | `PAYMENT_DRIVER` | `fake` for now (Pay / Decline buttons). You switch to `stripe` in step 4b |
+   | `STRIPE_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | leave empty for now (step 4b) |
 
    All other variables already have values from `render.yaml`. Don't edit those.
 4. **Apply**. The first build takes about 5–8 minutes. In the service's **Logs** you should see:
@@ -121,6 +123,30 @@ You don't need to create any tables: the API migrates and seeds on its first sta
 
 ---
 
+## 4b. Stripe test mode (optional), 5 minutes
+
+Card payments run through Stripe in **test mode**: real Stripe form, no real money.
+
+1. Sign up at <https://dashboard.stripe.com>. You don't need to activate the account for test mode.
+   Make sure the **Test mode** toggle (top right) is on. Every key must start with `sk_test_` / `pk_test_`.
+2. **Developers → API keys**: copy the **Publishable key** (`pk_test_…`) and **Secret key** (`sk_test_…`).
+3. **Developers → Webhooks → Add endpoint**:
+   - Endpoint URL: `https://<your-service>.onrender.com/api/v1/payments/stripe/webhook`
+   - Events: `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`
+   - After saving, reveal the **Signing secret** (`whsec_…`).
+4. Render → `gamekeys-api` → **Environment**: set
+   `PAYMENT_DRIVER=stripe`, `STRIPE_SECRET=sk_test_…`, `STRIPE_PUBLISHABLE_KEY=pk_test_…`,
+   `STRIPE_WEBHOOK_SECRET=whsec_…`, then **Save, rebuild and deploy**.
+5. Pay with card `4242 4242 4242 4242`, any future expiry and any CVC. `4000 0000 0000 0002` is
+   declined; `4000 0027 6000 3184` asks for 3-D Secure. The order completes when Stripe's webhook
+   arrives (usually 1–3 s; the page waits for it). Check **Developers → Webhooks → your endpoint**
+   for delivery errors if it doesn't.
+
+The frontend needs no Stripe setting: the publishable key comes from the API. To go back to the
+simulated buttons, set `PAYMENT_DRIVER=fake`.
+
+---
+
 ## 5. Smoke test, 5 minutes
 
 Open the Vercel URL:
@@ -146,8 +172,9 @@ If the first request takes about 50 s, that's Render's free tier waking up, not 
 - **Reservation expiry**: Render's free plan has no cron. Expired reservations are released inline
   on every checkout, so stock is never held by abandoned orders. The scheduled
   `orders:expire-reservations` only runs where a scheduler exists.
-- **Payments** are simulated (`PAYMENT_DRIVER=fake`, no real money). Stripe test mode is
-  implemented on the backend, but the frontend has no Stripe card form yet, so leave it on `fake`.
+- **Payments**: `PAYMENT_DRIVER=fake` (simulated buttons) or `stripe` (Stripe **test mode** card
+  form, step 4b). Never put live (`sk_live_`) keys here. If a payment lands after the 15-minute
+  reservation expired, it's refunded automatically.
 - **Redeploys** happen automatically on every push to `main`: the API only when `backend/**`
   changes (`buildFilter`), and the frontend on any change.
 - **Resetting the demo data**: run this from your machine against the **direct** URL, with the
@@ -170,4 +197,6 @@ If the first request takes about 50 s, that's Render's free tier waking up, not 
 | Render deploy fails at `[release] migrating` | `DB_DIRECT_URL` missing or wrong; it must be the **non-pooler** Neon host |
 | 500 errors mentioning "prepared statement" | `DB_EMULATE_PREPARES` isn't `true` while `DB_URL` points at the pooler |
 | Keys in old orders show as unreadable | `APP_KEY` was changed. Restore the original |
+| Stripe card paid, page stays on "Confirming…" | The webhook isn't arriving: check the endpoint URL, the three events and `STRIPE_WEBHOOK_SECRET` (Stripe → Webhooks shows the failed deliveries) |
+| Payment page: "Card payments aren't configured" | `STRIPE_PUBLISHABLE_KEY` is empty while `PAYMENT_DRIVER=stripe` |
 | API calls go to `localhost:8000` | `VITE_API_URL` wasn't set when Vercel built → set it and redeploy |
