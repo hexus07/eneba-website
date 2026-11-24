@@ -37,6 +37,13 @@ export const CheckIcon = (p: IconProps) => <Svg {...p}><path d="m5 12.5 4.5 4.5L
 export const InfoIcon = (p: IconProps) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 7.5v.5" /></Svg>;
 export const MenuIcon = (p: IconProps) => <Svg {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Svg>;
 export const ChevronRightIcon = (p: IconProps) => <Svg {...p}><path d="m9 5 7 7-7 7" /></Svg>;
+export const StarIcon = (p: IconProps) => (
+  <Svg {...p}><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" fill="currentColor" stroke="none" /></Svg>
+);
+/** Rosette with a check: "verified seller". */
+export const VerifiedIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 2.5 14.4 4.4 17.4 4.1 18.4 7l2.7 1.5-.7 3 1.6 2.6-2.3 2-.1 3.1-3 .4L15 22l-3-1-3 1-1.6-2.4-3-.4-.1-3.1-2.3-2 1.6-2.6-.7-3L5.6 7l1-2.9 3 .3z" /><path d="m8.5 12 2.3 2.3L15.5 9.6" /></Svg>
+);
 export const TrashIcon = (p: IconProps) => (
   <Svg {...p}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></Svg>
 );
