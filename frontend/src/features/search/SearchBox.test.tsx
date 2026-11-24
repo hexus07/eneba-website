@@ -10,7 +10,7 @@ import { SUGGEST_DEBOUNCE_MS } from './SearchBox';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const suggestion = (slug: string, title: string, price: number | null = 2999): Suggestion => ({
-  slug, title, cover_url: null, min_price_cents: price, currency: 'EUR', platform: { slug: 'steam', name: 'Steam' },
+  slug, title, cover_url: null, min_price_cents: price, currency: 'EUR', platform: { slug: 'steam', name: 'Steam' }, variants_count: 1,
 });
 
 function setup(path = '/') {
@@ -142,5 +142,24 @@ describe('SearchBox thumbnails', () => {
     const second = img();
     if (second) fireEvent.error(second);
     expect(img()).toBeNull();
+  });
+});
+
+describe('SearchBox grouped titles', () => {
+  it('shows one row per title with its version count and lowest price, linking to the cheapest variant', async () => {
+    mockApi((url) => (apiPath(url) === '/search/suggest'
+      ? { body: { data: [{ ...suggestion('stardew-psn', 'Stardew Valley', 1500), platform: { slug: 'psn', name: 'PSN' }, variants_count: 3 }] } }
+      : undefined));
+    const user = userEvent.setup();
+    const { router } = renderApp('/');
+    const [input] = screen.getAllByRole('combobox', { name: 'Search for games, top-ups and more' });
+    if (!input) throw new Error('no search combobox');
+
+    await user.type(input, 'stardew');
+    const option = await within(listbox()).findByRole('option', { name: 'Stardew Valley, 3 versions, from €15.00' });
+    expect(option).toHaveTextContent('3 versions · cheapest on PSN');
+
+    await user.click(option);
+    expect(router.state.location.pathname).toBe('/product/stardew-psn');
   });
 });
