@@ -1,0 +1,1008 @@
+ ▐▛███▛█   Claude Code v2.1.330
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   ~/pet-project/eneba-website
+
+
+❯ /mcp                                                                          
+  ⎿  Signed in and connected to figma.
+
+❯ I imported eneba.com into Figma with a browser extension, so the file         
+  structure is                                                                  
+  messy: generic names like "section", "item", "button", "div", absolute        
+  positioning,                                                                  
+  duplicates and hidden layers. Your job is to clean it up so another agent can 
+  later                                                                         
+  turn it into React + Tailwind components. Don't write any app code in this    
+  task.                                                                         
+                                                                                
+  Figma file: https://www.figma.com/design/jaipl50e6EpTMnsmzMTzD2/Untitled?node 
+  -id=0-1&p=f&t=quJUzdx9t0pmYUOS-0                                              
+                                                                                
+  Step 1 — Inventory (read only):                                               
+  - Use the Figma MCP (get_metadata, get_screenshot) to walk every page and     
+  top-level frame.                                                              
+  - Report: pages, main frames, repeated patterns (things that look like the    
+  same                                                                          
+    component used many times), hidden/empty/duplicate layers, and every        
+  distinct color,                                                               
+    font family/size/weight, border radius and spacing value you find.          
+  - Tell me which Figma MCP tools you have and whether you can write to the     
+  file.                                                                         
+                                                                                
+  Step 2 — Proposal (wait for my approval before changing anything):            
+  - Page structure: 00 Tokens, 01 Components, 02 Home, 03 Store, 04 Product,    
+    05 Cart & Checkout, 06 Auth, 07 Orders (only for screens that actually      
+  exist).                                                                       
+  - Naming scheme: PascalCase for components (Header, SearchBar, ProductCard,   
+  PriceTag,                                                                     
+    OfferRow, Button/Primary, Badge/Discount), slash for variants, descriptive  
+  camelCase                                                                     
+    for inner layers (coverImage, title, platformIcon, price).                  
+  - A rename map as a table: current path → new name, grouped by frame.         
+  - List of layers to delete (hidden, empty, duplicates) and candidates to turn 
+    into components.                                                            
+  - Design tokens table: name (color/bg/base, color/accent, text/body,          
+  radius/md, space/4…)                                                          
+    → value, with where it's used. Merge near-duplicate values (e.g. #1F1A3A    
+  and #1F1A3B)                                                                  
+    and flag them.                                                              
+                                                                                
+  Step 3 — Apply:                                                               
+  - If you have write access: apply the approved renames, deletions, page moves 
+  and                                                                           
+    create Variables for the tokens. Do not change any visual property (sizes,  
+  colors,                                                                       
+    positions) — the screenshots before and after must look identical. Work one 
+  page at                                                                       
+    a time and show me a screenshot after each.                                 
+  - If you are read-only: write everything from Step 2 to                       
+  design/FIGMA_CLEANUP.md and                                                   
+    the tokens to design/tokens.json, so I can apply them by hand or with       
+    "Rename layers with AI" and the next agent can use them directly.           
+                                                                                
+  Rules:                                                                        
+  - Eneba's logo, illustrations and banner artwork are reference only; mark     
+  them as                                                                       
+    "reference — do not export" rather than turning them into components.       
+  - Ask me when a layer's purpose is unclear instead of guessing.               
+
+  Called figma 3 times, ran 1 shell command (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ I imported eneba.com into Figma with a browser extension, so the file         
+  structure is                                                                  
+  messy: generic names like "section", "item", "button", "div", absolute        
+  positioning,                                                                  
+  duplicates and hidden layers. Your job is to clean it up so another agent can 
+  later                                                                         
+  turn it into React + Tailwind components. Don't write any app code in this    
+  task.                                                                         
+                                                                                
+  Figma file: https://www.figma.com/design/jaipl50e6EpTMnsmzMTzD2/Untitled?node 
+  -id=0-1&p=f&t=quJUzdx9t0pmYUOS-0                                              
+                                                                                
+  Step 1 — Inventory (read only):                                               
+  - Use the Figma MCP (get_metadata, get_screenshot) to walk every page and     
+  top-level frame.                                                              
+  - Report: pages, main frames, repeated patterns (things that look like the    
+  same                                                                          
+    component used many times), hidden/empty/duplicate layers, and every        
+  distinct color,                                                               
+    font family/size/weight, border radius and spacing value you find.          
+  - Tell me which Figma MCP tools you have and whether you can write to the     
+  file.                                                                         
+                                                                                
+  Step 2 — Proposal (wait for my approval before changing anything):            
+  - Page structure: 00 Tokens, 01 Components, 02 Home, 03 Store, 04 Product,    
+    05 Cart & Checkout, 06 Auth, 07 Orders (only for screens that actually      
+  exist).                                                                       
+  - Naming scheme: PascalCase for components (Header, SearchBar, ProductCard,   
+  PriceTag,                                                                     
+    OfferRow, Button/Primary, Badge/Discount), slash for variants, descriptive  
+  camelCase                                                                     
+    for inner layers (coverImage, title, platformIcon, price).                  
+  - A rename map as a table: current path → new name, grouped by frame.         
+  - List of layers to delete (hidden, empty, duplicates) and candidates to turn 
+    into components.                                                            
+  - Design tokens table: name (color/bg/base, color/accent, text/body,          
+  radius/md, space/4…)                                                          
+    → value, with where it's used. Merge near-duplicate values (e.g. #1F1A3A    
+  and #1F1A3B)                                                                  
+    and flag them.                                                              
+                                                                                
+  Step 3 — Apply:                                                               
+  - If you have write access: apply the approved renames, deletions, page moves 
+  and                                                                           
+    create Variables for the tokens. Do not change any visual property (sizes,  
+  colors,                                                                       
+    positions) — the screenshots before and after must look identical. Work one 
+  page at                                                                       
+    a time and show me a screenshot after each.                                 
+  - If you are read-only: write everything from Step 2 to                       
+  design/FIGMA_CLEANUP.md and                                                   
+    the tokens to design/tokens.json, so I can apply them by hand or with       
+    "Rename layers with AI" and the next agent can use them directly.           
+                                                                                
+  Rules:                                                                        
+  - Eneba's logo, illustrations and banner artwork are reference only; mark     
+  them as                                                                       
+    "reference — do not export" rather than turning them into components.       
+  - Ask me when a layer's purpose is unclear instead of guessing.               
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ readMcpResource(Read resource "skill://figma/figma-use/SKILL.md" from server
+                 "figma")
+  ⎿  {
+       "contents": [
+         {
+     … +514 lines (ctrl+o to expand)
+
+  Called figma 7 times, ran 1 shell command (ctrl+o to expand)
+
+⏺ Taking screenshots of the 6 imported frames. Next I'll go through their
+  structure.
+
+  Read 6 files, called figma 3 times, ran 2 shell commands (ctrl+o to expand)
+
+⏺ Found the invisible layers (empty hit-area rectangles). Next I'm outlining the
+  Product, Cart, Login and Checkout frames.
+
+  Called figma 4 times (ctrl+o to expand)
+
+⏺ Figma cleanup: Step 1 (inventory) and Step 2 (proposal)
+
+  I haven't changed anything in the file yet. Everything so far has been
+  read-only.
+
+  Figma MCP tools and write access
+
+  I can use get_metadata, get_screenshot, get_design_context, get_variable_defs,
+  search_design_system, get_libraries, Code Connect tools, upload_assets,
+  create_new_file, and use_figma. use_figma runs Figma Plugin API JavaScript
+  inside your file. All my inventory scripts ran through it, so I can write to 
+  the file. The only remaining check is your edit permission, and since you
+  imported the file that's almost certainly fine. Step 3 will happen in Figma
+  directly. I'll write the .md and .json files only as a handoff for the next
+  agent.
+
+  Step 1: Inventory
+
+  Pages: one page, Page 1. It holds 5 html.to.design sections with 6 frames, all
+  named 1512w default. There are about 3,600 nodes in total. The file has no
+  auto-layout, components, styles or variables.
+
+  Frame: 5:5
+  Section (current name): (no name)
+  What it actually is: Home
+  Nodes: 1554
+  ────────────────────────────────────────
+  Frame: 7:3
+  Section (current name): https://www.eneba.com/xbox-grand-theft-auto-vi…
+  What it actually is: Product page (GTA VI), full capture
+  Nodes: 1167
+  ────────────────────────────────────────
+  Frame: 5:1745
+  Section (current name): https://www.eneba.com/xbox-grand-theft-auto-vi…
+  What it actually is: Product page, failed capture (spinner, popup and footer
+    only)
+  Nodes: 327
+  ────────────────────────────────────────
+  Frame: 5:2076
+  Section (current name): same section as 5:1745
+  What it actually is: Cart (it's in the product section by mistake)
+  Nodes: 477
+  ────────────────────────────────────────
+  Frame: 5:1663
+  Section (current name): https://my.eneba.com/login…
+  What it actually is: Login
+  Nodes: 79
+  ────────────────────────────────────────
+  Frame: 5:2561
+  Section (current name): https://www.eneba.com/checkout…
+  What it actually is: Checkout, payment step: header, stepper and spinner
+    only
+  Nodes: 41
+
+  There are no Store/catalog or Orders screens.
+
+  Repeated patterns:
+
+  ┌───────────────────────┬──────────────────────────────┬──────────────────┐
+  │        Pattern        │         Current name         │      Count       │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Product card          │ Background+Border (182, 200, │ 45 (35 Home, 5   │
+  │                       │  202 or 224 wide)            │ Product, 5 Cart) │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Cashback badge        │ Background 99×30             │ 45               │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Platform bar          │                              │                  │
+  │ (platform icon and    │ Overlay+OverlayBlur          │ 45               │
+  │ name)                 │                              │                  │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Category shortcut     │ Nav > Link 100×60            │ 19               │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ eGift card tile       │ Link → <hash>.jpg 200×280    │ 15               │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Section heading with  │ Heading 2                    │ about 7          │
+  │ info icon             │                              │                  │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Offer row             │ Overlay / Item 1052×~100     │ 5                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Header                │ Header                       │ 3                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Footer, full          │ Footer 496h                  │ 3                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Footer, checkout /    │ Footer 217h / 17h            │ 1 each           │
+  │ auth                  │                              │                  │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Payment logo strip    │ Footer > Background 41h      │ 4                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Locale switcher       │ Button - Settings            │ 8                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Outline button (See   │                              │                  │
+  │ all, Show all, Load   │ various                      │ about 10         │
+  │ more)                 │                              │                  │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Primary yellow button │ various                      │ about 10         │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Checkout stepper      │ List 824×34                  │ 2                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Cart item             │ Item                         │ 2                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Checkbox              │ Background+Border 20×20      │ 4                │
+  ├───────────────────────┼──────────────────────────────┼──────────────────┤
+  │ Black Friday popup    │ Background+Shadow 155×157    │ 2                │
+  └───────────────────────┴──────────────────────────────┴──────────────────┘
+
+  Hidden, empty and duplicate layers:
+  - No layers are hidden (visible=false count is 0).
+  - 108 invisible leaf nodes with no fill, stroke or effect. These are leftover
+    HTML hit-areas:
+    - Link rectangles over each card: 45
+    - Rectangle: 46
+    - Border: 5
+    - Button - Show previous/more tabs: 2
+    - empty search Container: 3
+    - None of them are masks.
+  - Duplicate: frame 5:1745 is a broken copy of the product page (Main is just a
+    70×70 spinner).
+  - Clipped, not hidden: each product card has a yellow Button - Add to cart
+    rectangle pushed outside the card's clip area. This is the hover state.
+  - Odd sizes:
+    - The Home frame is 4550 px tall, but its content ends around 3570 px. The
+      rest is empty purple.
+    - 162 zero-width or zero-height vectors, mostly line strokes, which still
+      render.
+  - ⚠️ Personal data: in the Cart frame, the Email input (5:2200) contains your
+    real email address as text.
+
+  Colors:
+  - Product UI colors: #4618AC (page background), #45229C, #351183,
+    #3C1395/#3D1596, #5825CC, #1F0A4D (244 uses), #160850, #FAD318/#FAC917,
+    #63E3C2, #23C299, #00CF9F, #3DDCB3, #84E916/#9FEE49, #E76A8C, #D32252,
+    #FFFFFF at 100/85/70/60/40/12 %, #DCD8E6/#DCDCE6, #B3AAC9/#A09AAC/#9385B2,
+    #FEF8DC, black at 55/30/25 %.
+  - Third-party brands (not tokens):
+    - Trustpilot: #00B67A
+    - Visa, PayPal, Mastercard, Google Pay, app-store badges: #1D267A, #253B80,
+      #179BD7, #EB001B, #4285F4 and others
+    - Eneba logo gradients
+  - Effects:
+    - background blur 10 (×45)
+    - drop shadow 0 3 9 #000/25 and /40
+    - drop shadow 0 -4 20 #000/70
+    - drop shadow 2 3 0 #99001F (Black Week pill)
+
+  Typography:
+  - Inter only, in Regular, Medium, Semi Bold, Bold, Extra Bold and Black.
+  - About 140 size and line-height combinations. Most of them are fractional
+    sizes the plugin made up (11.8, 21.7, 13.9…).
+  - The real sizes are 9, 10, 11, 12, 14, 15, 16, 18, 20, 22, 26, 30 and 88 px.
+
+  Radius:
+  - Product cards and buttons have square corners (0).
+  - Other values: 1, 2, 3 (checkbox, tags), 4, 5, 6 (Trustpilot frame, nav
+    pills), 10 (chips, "Lowest price").
+  - 8, 12, 20, 35 and 50 are always full circles or pills (radius = half the
+    height).
+
+  Spacing: with no auto-layout, I worked these out from the gaps between sibling
+  layers and from padding.
+  - Gaps: 8, 5, 20, 4, 10, 15, 12, 3, 30, 24, 40, 50
+  - Padding: 15 (317 times, the card padding), 20, 10, 5, 30, 40
+
+  ---
+
+  Step 2: Proposal
+
+  Pages
+
+  ┌──────────────────┬───────────────────────────────────────────────────────┐
+  │       Page       │                       Contents                        │
+  ├──────────────────┼───────────────────────────────────────────────────────┤
+  │ 00 Tokens        │ Variable collections plus a swatch/type reference     │
+  │                  │ frame                                                 │
+  ├──────────────────┼───────────────────────────────────────────────────────┤
+  │ 01 Components    │ One master copy of each component candidate (see      │
+  │                  │ below)                                                │
+  ├──────────────────┼───────────────────────────────────────────────────────┤
+  │ 02 Home          │ Home / Desktop 1512 (5:5)                             │
+  ├──────────────────┼───────────────────────────────────────────────────────┤
+  │ 04 Product       │ Product / Desktop 1512 (7:3)                          │
+  ├──────────────────┼───────────────────────────────────────────────────────┤
+  │ 05 Cart &        │ Cart / Desktop 1512 (5:2076), Checkout / Payment –    │
+  │ Checkout         │ Loading (5:2561)                                      │
+  ├──────────────────┼───────────────────────────────────────────────────────┤
+  │ 06 Auth          │ Login / Desktop 1512 (5:1663)                         │
+  └──────────────────┴───────────────────────────────────────────────────────┘
+
+  I'm skipping 03 Store and 07 Orders because neither screen exists. The
+  html.to.design sections get the same names as their frames.
+
+  Naming rules (applied to every frame)
+
+  ┌────────────────────────────────────┬────────────────────────────────────┐
+  │              Current               │                New                 │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Item → Link → X (text)             │ X in camelCase, e.g.               │
+  │                                    │ linkCheapGames                     │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ SVG / *.svg inside a button or     │ icon + purpose (searchIcon,        │
+  │ link                               │ cartIcon, infoIcon)                │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Container wrapping one text layer  │ the role of that text (titleBox,   │
+  │                                    │ regionBox)                         │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Heading 2 → X                      │ sectionTitle                       │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Strong → X                         │ the role (price, cartCount,        │
+  │                                    │ rating)                            │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Vertical Divider / Horizontal      │ divider (or oldPriceStrike inside  │
+  │ Divider                            │ a price)                           │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Background, Background+Border,     │ the component name, or body /      │
+  │ Overlay                            │ panel                              │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Image frames named after a product │ coverImage / sellerAvatar /        │
+  │  or seller                         │ platformIcon                       │
+  └────────────────────────────────────┴────────────────────────────────────┘
+
+  Rename map: key layers
+
+  Shared parts (Header in 3 frames, Footer in 3 frames)
+
+  ┌───────────────────────────────────┬─────────────────────────────────────┐
+  │           Current path            │                 New                 │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header                            │ Header                              │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Link - Eneba → Eneba logo  │ logo ⚑ reference — do not export    │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Form → Border → Combobox - │ SearchBar → field → input           │
+  │  Search                           │                                     │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Form/SVG                   │ searchIcon                          │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Button - Settings          │ LocaleSwitcher (globeIcon,          │
+  │                                   │ language, divider, currency)        │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Link - Wishlist → SVG      │ wishlistButton                      │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Button - My shopping cart  │ cartButton, cartCount               │
+  │ → SVG + Strong                    │                                     │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Link, " | ", Link →        │ loginLink, separator, registerLink  │
+  │ Register                          │                                     │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Nav/List                   │ MainNav / navList                   │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Nav/List/Item → Link       │ categoriesMenuButton                │
+  │ (Categories)                      │                                     │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Header/Nav GTA 6 / Black Week     │ promoPill/Gta6, promoPill/BlackWeek │
+  │ pills (7:69, 7:73)                │  ⚑ reference                        │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer                            │ Footer                              │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/Background/List            │ PaymentMethodsStrip (items          │
+  │                                   │ paymentLogo/PayPal…) ⚑ reference    │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/List ×5                    │ linksAbout, linksBuy, linksHelp,    │
+  │                                   │ linksCommunity, linksBusiness       │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/List (social)              │ socialLinks (facebook, x,           │
+  │                                   │ instagram, discord, reddit)         │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/Background+Shadow          │ pcMagBadge ⚑ reference              │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/Link → Google play badge / │ appBadge/GooglePlay,                │
+  │  Apple badge                      │ appBadge/AppStore ⚑ reference       │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/Iframe → Html → Body       │ trustpilotWidget ⚑ reference        │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/Form (Input, Button)       │ NewsletterForm (emailInput,         │
+  │                                   │ Button/Primary)                     │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/Button - Settings          │ LocaleSwitcher                      │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Footer/Copyright…, Cookie         │ copyright, cookiePrefsLink, period  │
+  │ preferences, .                    │                                     │
+  └───────────────────────────────────┴─────────────────────────────────────┘
+
+  ProductCard (all 45 cards)
+
+  ┌───────────────────────────────────┬─────────────────────────────────────┐
+  │              Current              │                 New                 │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Background+Border                 │ ProductCard                         │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ <product title> [image]           │ coverImage                          │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Link (no paint)                   │ delete                              │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Background (lower)                │ body                                │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Background 99×30 / SVG / Cashback │ Badge/Cashback / icon / label       │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Overlay+OverlayBlur / <platform>  │ platformBar / platformIcon /        │
+  │ img / Container                   │ platformName                        │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Container 36h / text              │ titleBox / title                    │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Container 12h / Global            │ regionBox / region                  │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ From, ¥10,954, 5% Cashback        │ priceLabel, price, cashbackAmount   │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ -52%, ¥5,223, Horizontal Divider, │ discountPercent, oldPrice,          │
+  │  SVG                              │ oldPriceStrike, priceInfoIcon       │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Button - Add to cart … (clipped,  │ addToCartHover (kept)               │
+  │ yellow)                           │                                     │
+  ├───────────────────────────────────┼─────────────────────────────────────┤
+  │ Rectangle (no paint)              │ delete                              │
+  └───────────────────────────────────┴─────────────────────────────────────┘
+
+  02 Home (5:5)
+
+  ┌────────────────────────────┬────────────────────────────────────────────┐
+  │          Current           │                    New                     │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Main                       │ content                                    │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Main/List (hero, 4 items)  │ HeroBanners ⚑ reference — do not export    │
+  │                            │ (all 4 banners)                            │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Main/Nav + 19 Links        │ CategoryShortcuts / CategoryShortcut       │
+  │                            │ (icon, label)                              │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Button - Show              │ scrollPrevButton, scrollNextButton         │
+  │ previous/more categories   │                                            │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Section 5:214 / Heading 2  │ RecommendedSection / SectionHeading /      │
+  │ / inner Section            │ cardRow                                    │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Section 5:353 / Overlay    │ TopGamesSection / sectionBand              │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Section 5:836 / 15× Link → │ EGiftCardsSection / GiftCardTile ⚑         │
+  │  <hash>.jpg                │ reference (third-party brand art)          │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Section 5:860              │ GiftCardsSection                           │
+  ├────────────────────────────┼────────────────────────────────────────────┤
+  │ Link - See all/Show all…   │ Button/Outline                             │
+  └────────────────────────────┴────────────────────────────────────────────┘
+
+  04 Product (7:3)
+
+  Current: Main/List (breadcrumbs) / Item / Border 8×8
+  New: Breadcrumbs / crumb / chevron
+  ────────────────────────────────────────
+  Current: Picture → …
+  New: coverImage
+  ────────────────────────────────────────
+  Current: Border "Cashback deal"
+  New: Badge/CashbackDeal
+  ────────────────────────────────────────
+  Current: Heading 1 → …
+  New: productTitle
+  ────────────────────────────────────────
+  Current: Button - Add to wishlist
+  New: wishlistButton (icon, count)
+  ────────────────────────────────────────
+  Current: •, Strong → 105 people…
+  New: liveDot, watchersCount
+  ────────────────────────────────────────
+  Current: List 798×133 / Item ×4
+  New: ProductFacts / FactItem (icon, title, description, link)
+  ────────────────────────────────────────
+  Current: Paragraph+HorizontalBorder
+  New: worksOn
+  ────────────────────────────────────────
+  Current: Container 1052×99 / Background ×6
+  New: MediaGallery / mediaThumb (image, playIcon)
+  ────────────────────────────────────────
+  Current: Background+Border 1052×96
+  New: Notice/Warning
+  ────────────────────────────────────────
+  Current: Background+Shadow 350×272
+  New: FeaturedOfferPanel (label, price, priceNote, Badge/BestCashback,
+    cashback, Button/PayPal, Button/Primary, Button/AddToCart, moreOffersLink)
+  ────────────────────────────────────────
+  Current: Background+Shadow 350×334
+  New: SafeCheckoutPanel (paymentMethods, scamAdviser ⚑ reference, pcMagBadge
+    ⚑ reference)
+  ────────────────────────────────────────
+  Current: Background+Shadow 350×115
+  New: DealsSubscribeCard
+  ────────────────────────────────────────
+  Current: List (×2) / Overlay & Item
+  New: RecommendedOffers / OtherOffers / OfferRow (sellerAvatar, sellerName,
+    verifiedIcon, rating, price, Badge/LowestPrice, cashback,
+    Button/Secondary)
+  ────────────────────────────────────────
+  Current: Iframe → Html → Body (top)
+  New: trustpilotWidget ⚑ reference
+  ────────────────────────────────────────
+  Current: 5× product cards
+  New: AlsoViewed / ProductCard
+  ────────────────────────────────────────
+  Current: Reviews block (List ×4, List → Item)
+  New: ReviewSummary / RatingStars / ReviewItem
+  ────────────────────────────────────────
+  Current: List (Action, Adventure)
+  New: GenreTags / Tag
+  ────────────────────────────────────────
+  Current: Background 1052×535 / Container / Section
+  New: DescriptionTabs / tabBar / tabPanel
+  ────────────────────────────────────────
+  Current: Background 1052×127 / List / Item
+  New: OtherDetails / detailsList / DetailRow (label, value)
+  ────────────────────────────────────────
+  Current: Background+Shadow 155×157 (7:1161)
+  New: BlackFridayPopup ⚑ reference (see question 3)
+
+  05 Cart & Checkout
+
+  ┌────────────────────────┬────────────────────────────────────────────────┐
+  │        Current         │                      New                       │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ Main/Background 94h    │ CheckoutHeader (logo ⚑, CheckoutStepper,       │
+  │ (both frames)          │ LocaleSwitcher)                                │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ List 824×34 / Item /   │ CheckoutStepper / step / stepDot               │
+  │ Strong                 │                                                │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │                        │ CartPanel / CartItem (coverImage, soldBy,      │
+  │ Form/Background        │ sellerAvatar, removeButton, wishlistButton,    │
+  │ 635×354 / List/Item    │ title, regionWarning, digitalProduct,          │
+  │                        │ QuantityStepper, price, cashback)              │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ Container/Background   │ DeliveryPanel (TextInput/Email, Checkbox)      │
+  │ 355×182                │                                                │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │                        │ SummaryPanel (SummaryRow, total,               │
+  │ Container/Background   │ totalCashback, consentCheckbox ×2,             │
+  │ 355×495                │ discountCodeToggle, trustpilotWidget ⚑,        │
+  │                        │ Button/Primary)                                │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ Background 1010×469    │ InspiredSection / 5× ProductCard               │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ Footer 217h            │ Footer/Checkout                                │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ 5:2603 Border 70×70    │ Spinner                                        │
+  └────────────────────────┴────────────────────────────────────────────────┘
+
+  06 Auth (5:1663)
+
+  ┌───────────────────────┬─────────────────────────────────────────────────┐
+  │        Current        │                       New                       │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Header → Link → SVG   │ logo ⚑ reference                                │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Heading 1 → Hi!…      │ heroGreeting                                    │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Background 380×543    │ LoginCard                                       │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ List / Item → Link ×3 │ socialLogin / Button/Social (Google, Facebook,  │
+  │                       │ Apple)                                          │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ List / Item → Link →  │ socialIconRow / Button/SocialIcon               │
+  │ SVG ×4                │                                                 │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Horizontal Divider ×2 │ orDivider                                       │
+  │  + or                 │                                                 │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Form / Input / Button │ LoginForm / TextInput/Email / Button/Primary,   │
+  │  ×2                   │ Button/Outline                                  │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Footer 17h            │ Footer/Auth                                     │
+  └───────────────────────┴─────────────────────────────────────────────────┘
+
+  Layers to delete
+
+  1. Frame 5:1745 (327 nodes). It's a broken duplicate of the product page.
+  2. 108 invisible leaf nodes:
+     - Link ×45 and Rectangle ×46 with no paint
+     - Border ×5 with no paint
+     - Button - Show previous/more tabs (7:829, 7:830)
+     - empty Containers 5:19, 7:17, 5:1759
+
+     None of these render, so screenshots won't change.
+
+  Component candidates (to build on 01 Components)
+
+  - Layout: Header, MainNav, Footer (variants Full/Checkout/Auth),
+    CheckoutHeader, CheckoutStepper (Cart/Payment/Done)
+  - Search and locale: SearchBar, LocaleSwitcher
+  - Cards and rows: ProductCard (Default/Discounted), GiftCardTile,
+    CategoryShortcut, SectionHeading, OfferRow, CartItem, SummaryRow, ReviewItem
+  - Badges and price: Badge (Cashback, CashbackDeal, BestCashback, LowestPrice),
+    PriceTag (Default/Discounted), Tag
+  - Buttons: Button (Primary yellow, Outline white border, Secondary small "Buy
+    now", PayPal, Social, SocialIcon, Icon)
+  - Form controls: TextInput, Checkbox, QuantityStepper
+  - Other: RatingStars, Breadcrumbs, Notice/Warning, Spinner
+
+  I'll mark these reference — do not export: Eneba logo, hero banners, GTA 6 /
+  Black Week pills, Black Friday popup, eGift brand tiles, payment logos,
+  app-store badges, PC Mag badge, Trustpilot, ScamAdviser.
+
+  Design tokens
+
+  Token: color/bg/base
+  Value: #4618AC
+  Used for: page background (all frames)
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/bg/header
+  Value: #351183
+  Used for: checkout header bar, tab bar
+  Merge / flag: ⚑ merge #3C1395, #3D1596 here?
+  ────────────────────────────────────────
+  Token: color/surface/raised
+  Value: #45229C
+  Used for: nav bar, inputs, panels
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/surface/card
+  Value: #1F0A4D
+  Used for: card body, offer rows, card borders, text on yellow
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/surface/footer
+  Value: #160850
+  Used for: footer, login background
+  Merge / flag: ⚑ close to #1F0A4D, kept separate
+  ────────────────────────────────────────
+  Token: color/surface/tab
+  Value: #5825CC
+  Used for: active tab (product page)
+  Merge / flag: ⚑ 3 uses, please confirm
+  ────────────────────────────────────────
+  Token: color/overlay/band
+  Value: #000000 / 30 %
+  Used for: "Top games" band
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/overlay/scrim
+  Value: #000000 / 55 % + blur 10
+  Used for: card platform bar
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/accent
+  Value: #FAD318
+  Used for: primary buttons, links, checkboxes
+  Merge / flag: ⚑ merge #FAC917 (1 use)
+  ────────────────────────────────────────
+  Token: color/accent/cashback
+  Value: #63E3C2
+  Used for: cashback badge, card border
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/success
+  Value: #23C299
+  Used for: stepper, verified, success text
+  Merge / flag: ⚑ merge #00CF9F (4), #3DDCB3 (2)?
+  ────────────────────────────────────────
+  Token: color/text/primary
+  Value: #FFFFFF
+  Used for:
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/text/secondary
+  Value: #FFFFFF / 85 %
+  Used for:
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/text/tertiary
+  Value: #FFFFFF / 70 %
+  Used for:
+  Merge / flag: ⚑ /60 (7 uses) merged here
+  ────────────────────────────────────────
+  Token: color/text/disabled
+  Value: #FFFFFF / 40 %
+  Used for: upcoming stepper step
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/text/subtle
+  Value: #DCD8E6
+  Used for: card meta text
+  Merge / flag: ⚑ merge #DCDCE6
+  ────────────────────────────────────────
+  Token: color/text/muted
+  Value: #B3AAC9
+  Used for: labels, "From"
+  Merge / flag: ⚑ merge #A09AAC, #9385B2
+  ────────────────────────────────────────
+  Token: color/text/cashback
+  Value: #84E916
+  Used for: cashback amounts
+  Merge / flag: ⚑ merge #9FEE49
+  ────────────────────────────────────────
+  Token: color/text/region
+  Value: #E76A8C
+  Used for: region label, warnings
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/text/notice
+  Value: #FEF8DC
+  Used for: Important Notice text
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/danger
+  Value: #D32252
+  Used for: sale / Black Week
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/border/default
+  Value: #FFFFFF
+  Used for: outline buttons, 1–2 px
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: color/border/subtle
+  Value: #FFFFFF / 12 %
+  Used for: dividers
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: radius/none
+  Value: 0
+  Used for: cards, buttons, panels
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: radius/xs
+  Value: 2
+  Used for: payment chips, badge frame
+  Merge / flag: ⚑ merges 1, 3
+  ────────────────────────────────────────
+  Token: radius/sm
+  Value: 4
+  Used for: Trustpilot frame, nav pills
+  Merge / flag: ⚑ merges 5, 6
+  ────────────────────────────────────────
+  Token: radius/md
+  Value: 10
+  Used for: tags, "Lowest price"
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: radius/full
+  Value: 9999
+  Used for: avatars, stepper dots, pills
+  Merge / flag: 8/12/20/35/50 were all half the height
+  ────────────────────────────────────────
+  Token: space/2 … space/50
+  Value: 2, 4, 5, 8, 10, 12, 15, 20, 24, 30, 40, 50
+  Used for: 15 = card padding, 20 = card gap, 30/40 = section spacing
+  Merge / flag: ⚑ 3, 7, 14, 19 are leftovers from the import, dropped
+  ────────────────────────────────────────
+  Token: text/display
+  Value: Inter 800, 88/88
+  Used for: login hero
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/h1
+  Value: Inter 700, 26/32.5
+  Used for: product title
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/h2
+  Value: Inter 700, 30/37.5
+  Used for: Home section titles
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/h2-sm
+  Value: Inter 700, 18/22.5
+  Used for: Product and Cart section titles
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/price-lg
+  Value: Inter 800, 22/22
+  Used for: card price (merges 21.1–21.8)
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/price-xl
+  Value: Inter 800, 30/30
+  Used for: cart total, featured offer
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/title-card
+  Value: Inter 800, 12/18
+  Used for: card title (merges 11.8, 11.6)
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/body
+  Value: Inter 400, 14/21
+  Used for:
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/body-sm
+  Value: Inter 400, 12/18
+  Used for:
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/label
+  Value: Inter 600, 12/18
+  Used for:
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/caption
+  Value: Inter 800, 12/12
+  Used for: "From", region (merges 11.1–11.8)
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/badge
+  Value: Inter 800, 10/10, uppercase
+  Used for: cashback badge (merges 9.8)
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: text/button
+  Value: Inter 800, 15/15
+  Used for: buttons (merges 14.5–14.9)
+  Merge / flag:
+  ────────────────────────────────────────
+  Token: shadow/panel
+  Value: 0 3 9 #000 / 25 %
+  Used for: side panels
+  Merge / flag: ⚑ /40 merged here
+
+  ---
+
+  Before I apply, please confirm or answer
+
+  1. Approve the page structure, rename map, both deletions (frame 5:1745 and
+     the 108 invisible layers) and the token list. I'll apply them in this
+     order: 02 Home → 04 Product → 05 Cart & Checkout → 06 Auth → 00 Tokens.
+     I'll send a screenshot after each.
+  2. Variables: I plan to create them only, without binding them to layers.
+     Binding the merged near-duplicates (for example 21.7 → 22 px) would change
+     how things look. Alternatively, I can bind only the exact matches. Which do
+     you want?
+  3. Black Friday popup (7:1161): keep it as a reference layer, or delete it?
+  4. Your email in the Cart input (5:2200): can I replace it with
+     you@example.com? That changes a text layer, so the screenshots would differ
+     there.
+  5. Components: I plan to make one master of each candidate on 01 Components
+     and leave the screen layers as they are. Swapping them for instances could
+     shift pixels. Is that OK?
+  6. The 6 merge flags in the token table: #3C1395→header,
+     #00CF9F/#3DDCB3→success, #5825CC as a tab color, and the radius/space
+     merges. Do these look right?
+
+✻ Cooked for 5m 11s · done Monday 6:22 PM
+
+❯ all good, do changes                                                          
+
+⏺ Applying changes now. I'm going with the defaults from my proposal on the open
+  questions:
+  - Variables are created but not bound to layers.
+  - The Black Friday popup stays, marked as reference.
+  - Your email in the Cart input becomes a placeholder.
+  - One master of each component goes on 01 Components, and the screens stay
+    untouched.
+
+  First I'll set up the pages and move the frames.
+
+  Called figma · 1 failed (ctrl+o to expand)
+
+⏺ The file is on Figma's Starter plan, which allows only 3 pages. Before
+  changing the plan, I'm checking what that failed call left behind.
+
+  Called figma (ctrl+o to expand)
+
+⏺ The failed call was rolled back, so the file is unchanged. I'm using 00
+  Tokens, 01 Components and 02 Screens, with each screen group as its own
+  section in 02 Screens. · summary
+
+  Called figma (ctrl+o to expand)
+
+⏺ Pages are done (00 Tokens, 01 Components, 02 Screens), and the broken
+  duplicate is deleted. Next is the 02 Home rename and cleanup.
+
+  Listed 1 directory, called figma 2 times · 1 failed (ctrl+o to expand)
+
+⏺ Figma's Starter plan limits MCP tool calls, and that limit cut me off partway
+  through. I'll save the current state and the rest of the plan to design/ so we
+  can finish from there.
+
+⏺ Write(design/tokens.json)
+  ⎿  Wrote 104 lines to design/tokens.json
+       1 {
+       2   "$description": "Design tokens extracted from the eneba.com ht
+         ml.to.design import (Figma file jaipl50e6EpTMnsmzMTzD2). Format:
+          W3C Design Tokens (DTCG). Values marked $extensions.merged abso
+         rb near-duplicates found in the import. Third-party brand colors
+          (Trustpilot, Visa, PayPal, Mastercard, Google, app stores) and 
+         the Eneba logo gradients are intentionally excluded.",
+       3   "color": {
+       4     "$type": "color",
+       5     "bg": {
+     … +99 lines (ctrl+o to expand)
+
+⏺ Write(design/FIGMA_CLEANUP.md)
+  ⎿  Wrote 255 lines to design/FIGMA_CLEANUP.md
+      1 # Figma cleanup: eneba.com import
+      2 
+      3 Figma file: `jaipl50e6EpTMnsmzMTzD2` (imported with html.to.desig
+        n).
+      4 Tokens: [`tokens.json`](./tokens.json) (DTCG format).
+      5 
+      6 This file records what has been applied in Figma, what is still l
+        eft, and the naming map, so the
+      7 next agent can build React and Tailwind components from it.
+      8 
+     … +247 lines (ctrl+o to expand)
+
+  Ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+⏺ I only got part of the cleanup done: Figma's Starter plan ran out of tool
+  calls partway through, and Figma is now refusing every call, including
+  screenshots. So I don't have a screenshot of the Home screen after the
+  changes.
+
+  Done in Figma:
+  - Pages: the Starter plan only allows 3 pages, so I used 00 Tokens, 01 
+    Components and 02 Screens. Each screen group is a section on 02 Screens,
+    named with your numbering: 02 Home, 04 Product, 05 Cart & Checkout, 06 Auth.
+    The Cart and Checkout frames now share one section.
+  - Duplicate removed: the broken product-page copy (frame 5:1745, the one
+    showing only a loading spinner) is deleted.
+  - Frames renamed: Home / Desktop 1512, Product / Desktop 1512, Cart / Desktop 
+    1512, Checkout / Payment – Loading, Login / Desktop 1512.
+  - 02 Home: 881 layers renamed and 68 invisible layers deleted. That covers the
+    header, search bar, category shortcuts, all 4 sections, 35 product cards,
+    the eGift tiles, the hero banners (marked reference) and the footer.
+    - The deleted layers had no fill, stroke or effect and none were masks, so
+      the screen shouldn't look different. I haven't confirmed that with a
+      screenshot.
+    - 18 inner Background layers in some Home product cards didn't get renamed.
+      I couldn't check what they are before the limit hit.
+
+  Not done yet:
+  - Renames and deletions on Product, Cart & Checkout and Auth
+  - Replacing your email in the Cart input (5:2200) with you@example.com
+  - Creating the token Variables
+  - Creating the component masters
+
+  In the repo: I followed your read-only fallback. Nothing is committed.
+  - design/FIGMA_CLEANUP.md has the status table, the full rename map for every
+    frame with node IDs, the deletion list, component candidates, the
+    reference-only assets and notes for the next agent.
+  - design/tokens.json has all the tokens in the standard design-tokens (DTCG)
+    format, with each merged near-duplicate recorded.
+
+  I also saved a project memory about the 3-page and tool-call limits.
+
+  Ways to finish:
+  1. Wait for the quota to reset, or upgrade the plan. The remaining work is
+     about 5 large calls (Product, Cart & Checkout, Auth, Variables,
+     Components), each followed by a screenshot.
+  2. Apply the rest by hand, using FIGMA_CLEANUP.md and "Rename layers with AI".
+  3. I write a small local Figma plugin with the same scripts. You'd run it from
+     Plugins → Development, and it doesn't use the tool-call quota.
+
+  Before you build on the Home renames, look at that screen in Figma once to
+  confirm it looks the same.
+
+✻ Worked for 4m 15s · done Monday 6:26 PM
+
+※ recap: I'm cleaning up your Figma import of eneba.com: Home is renamed and the pages are set up, but Figma's Starter plan tool-call limit stopped me before Product, Cart, Auth, tokens and components. Next, choose: wait for the reset, upgrade, apply by hand, or use a local plugin I'd write. (turn off recaps in /config)
