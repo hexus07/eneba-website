@@ -8,6 +8,12 @@ import { MIN_SUGGEST_LENGTH, useSuggestions, type Suggestion } from './api';
 
 export const SUGGEST_DEBOUNCE_MS = 200;
 
+/** "Elden Ring, Steam, €29.49" or, for several variants, "Elden Ring, 4 versions, from €22.74". */
+function suggestionLabel(s: Suggestion): string {
+  const price = s.min_price_cents === null ? 'out of stock' : formatMoney(s.min_price_cents, s.currency);
+  return s.variants_count > 1 ? `${s.title}, ${s.variants_count} versions, from ${price}` : `${s.title}, ${s.platform.name}, ${price}`;
+}
+
 export interface SearchBoxProps {
   /** Distinguishes the desktop and mobile instances' ids. */
   idSuffix: string;
@@ -143,7 +149,7 @@ export function SearchBox({ idSuffix, initialValue = '' }: SearchBoxProps) {
             id={ids.option(i)}
             role="option"
             aria-selected={active === i}
-            aria-label={`${s.title}, ${s.platform.name}, ${s.min_price_cents === null ? 'out of stock' : formatMoney(s.min_price_cents, s.currency)}`}
+            aria-label={suggestionLabel(s)}
             onMouseDown={(e) => e.preventDefault() /* keep focus in the input */}
             onClick={() => goToProduct(s)}
             onMouseEnter={() => setActive(i)}
@@ -154,10 +160,16 @@ export function SearchBox({ idSuffix, initialValue = '' }: SearchBoxProps) {
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-label text-fg-primary">{s.title}</span>
-              <span className="text-body-sm text-fg-muted">{s.platform.name}</span>
+              <span className="text-body-sm text-fg-muted">
+                {s.variants_count > 1 ? `${s.variants_count} versions · cheapest on ${s.platform.name}` : s.platform.name}
+              </span>
             </span>
             <span className="text-label text-fg-primary">
-              {s.min_price_cents === null ? <span className="text-fg-muted">Out of stock</span> : formatMoney(s.min_price_cents, s.currency)}
+              {s.min_price_cents === null ? (
+                <span className="text-fg-muted">Out of stock</span>
+              ) : (
+                <>{s.variants_count > 1 && <span className="text-body-sm text-fg-muted">from </span>}{formatMoney(s.min_price_cents, s.currency)}</>
+              )}
             </span>
           </li>
         ))}
