@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import type { Order } from '@/features/orders/types';
 
@@ -13,4 +14,19 @@ export function placeOrder(idempotencyKey: string) {
 /** Fake gateway only (PAYMENT_DRIVER=fake). 409 when the reservation expired. */
 export function confirmFakePayment(orderId: string, outcome: 'succeed' | 'fail') {
   return apiClient.post<{ data: Order }>(`/checkout/${encodeURIComponent(orderId)}/confirm`, { outcome }).then((r) => r.data);
+}
+
+export const paymentKey = (orderId: string) => ['payment', orderId] as const;
+
+/**
+ * GET /checkout/{order}/payment: the payment session of an existing order (after a reload).
+ * Stripe returns the same PaymentIntent per order, so this never creates a second charge.
+ */
+export function usePaymentSession(orderId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: paymentKey(orderId),
+    queryFn: ({ signal }) => apiClient.get<{ data: Order; payment: PaymentInfo | null }>(`/checkout/${encodeURIComponent(orderId)}/payment`, { signal }).then((r) => r.payment),
+    enabled,
+    staleTime: Infinity,
+  });
 }

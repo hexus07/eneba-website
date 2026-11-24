@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/apiClient';
 import { formatMoney } from '@/lib/money';
 import { formatCountdown, useNow } from '@/lib/useNow';
 import { confirmFakePayment } from './api';
+import { StripePayment } from './StripePayment';
 
 function Panel({ children }: { children: ReactNode }) {
   return <section className="mx-auto flex max-w-[560px] flex-col gap-15 bg-canvas-header p-30">{children}</section>;
@@ -103,10 +104,7 @@ export function PaymentPage() {
             </Button>
           </>
         ) : (
-          <p role="status" className="bg-surface-card p-12 text-body-sm text-fg-secondary">
-            This server uses Stripe (test mode). The Stripe card form isn’t part of this demo frontend yet; set PAYMENT_DRIVER=fake to pay with the test gateway.
-            This page updates automatically if the payment completes.
-          </p>
+          <StripePayment order={order} />
         )}
       </Panel>
     </div>

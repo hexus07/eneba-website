@@ -154,14 +154,6 @@ describe('PaymentPage', () => {
     expect(await screen.findByRole('heading', { name: 'Reservation expired' })).toBeInTheDocument();
     expect(calls.some((c) => c.path.endsWith('/confirm'))).toBe(false);
   });
-
-  it('with the Stripe driver, says the card form is not wired instead of faking it', async () => {
-    api((c) => (c.path === `/orders/${ORDER_ID}` ? { body: { data: order({ payment_provider: 'stripe' }) } } : undefined));
-    renderApp(`/checkout/pay/${ORDER_ID}`);
-
-    expect(await screen.findByText(/stripe card form isn’t part of this demo/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /pay €/i })).not.toBeInTheDocument();
-  });
 });
 
 describe('Order keys', () => {
